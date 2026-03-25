@@ -534,13 +534,13 @@
 <div class="modal-backdrop" id="apiModal">
   <div class="modal">
     <button class="modal-close" onclick="closeApiModal()">✕</button>
-    <h2>🔑 Groq API 키 설정</h2>
-    <p>Groq에서 무료로 발급받은 API 키를 입력하세요.<br>키는 이 브라우저에만 저장됩니다.</p>
+    <h2>🔑 Gemini API 키 설정</h2>
+    <p>Google AI Studio에서 무료로 발급받은 API 키를 입력하세요.<br>키는 이 브라우저에만 저장됩니다.</p>
     <div class="info-box" style="margin-bottom:14px;">
-      아직 키가 없다면 → <a href="https://console.groq.com/keys" target="_blank">console.groq.com</a> 에서 무료 발급 (카드 등록 불필요!)
+      아직 키가 없다면 → <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com</a> 에서 무료 발급 (로그인만 하면 바로 생성 가능)
     </div>
     <label>API 키</label>
-    <input type="password" id="apiKeyInput" placeholder="gsk_..." style="margin-bottom:12px;" />
+    <input type="password" id="apiKeyInput" placeholder="AIzaSy..." style="margin-bottom:12px;" />
     <button class="btn-primary" onclick="saveApiKey()">적용하기</button>
   </div>
 </div>
@@ -590,7 +590,7 @@
       </button>
 
       <div class="info-box">
-        API 키가 없으면 생성이 안 돼요. 위 설정 버튼에서 Groq API 키를 먼저 입력해주세요.
+        API 키가 없으면 생성이 안 돼요. 위 설정 버튼에서 Gemini API 키를 먼저 입력해주세요.
       </div>
     </div>
 
@@ -743,7 +743,7 @@
 
 <script>
 // ===== 상태 =====
-let apiKey = localStorage.getItem('gemini_key') || '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';
+let apiKey = localStorage.getItem('gemini_key') || 'AIzaSyAbDKYkLrVZBHvsUy4p_qmgVW7e-eRAKZM';
 let brandColor = '#5b6af0';
 let fontFamily = '"Noto Sans KR", sans-serif';
 let selectedTone = '전문적이고 신뢰감 있게';
@@ -1195,7 +1195,7 @@ function selectSlide(idx) {
 
 // ===== AI 생성 =====
 async function generateSlides() {
-  if (!apiKey) { alert('먼저 Groq API 키를 설정해주세요!\n우측 상단 "API 키 설정" 버튼을 누르세요.'); openApiModal(); return; }
+  if (!apiKey) { alert('먼저 Gemini API 키를 설정해주세요!\n우측 상단 "API 키 설정" 버튼을 누르세요.'); openApiModal(); return; }
   const topic = document.getElementById('topicInput').value.trim();
   if (!topic) { alert('카드뉴스 주제를 입력해주세요!'); return; }
 
@@ -1227,17 +1227,12 @@ async function generateSlides() {
 }
 `;
 
-    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.8,
-        max_tokens: 2048
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.8, maxOutputTokens: 2048 }
       })
     });
 
@@ -1247,7 +1242,7 @@ async function generateSlides() {
     }
 
     const data = await res.json();
-    let text = data.choices?.[0]?.message?.content || '';
+    let text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
     // JSON 추출
     const match = text.match(/\{[\s\S]*\}/);
