@@ -956,10 +956,20 @@ async function fetchWithBackoff(url, options, maxRetries = 5) {
   for (let i = 0; i <= maxRetries; i++) {
     try {
       const response = await fetch(url, options);
-      if (!response.ok) throw new Error(`API 응답 오류 (${response.status})`);
+      if (!response.ok) {
+        // 구글 API가 보내는 상세 에러 메시지를 파싱합니다.
+        const errData = await response.json().catch(() => ({}));
+        const errMsg = errData.error?.message || `API 응답 오류 (${response.status})`;
+        const error = new Error(errMsg);
+        error.status = response.status;
+        throw error;
+      }
       return await response.json();
     } catch (error) {
-      if (i === maxRetries) throw error;
+      // 400(잘못된 요청), 403(권한없음), 404(모델없음) 에러는 재시도해도 실패하므로 즉시 중단 (429 폭탄 방지 핵심!)
+      if (i === maxRetries || [400, 403, 404].includes(error.status)) {
+        throw error;
+      }
       await new Promise(resolve => setTimeout(resolve, delays[i]));
     }
   }
@@ -1049,7 +1059,13 @@ async function generateSlides() {
     showMessage('AI 카드뉴스 기획이 완료되었습니다!', true);
 
   } catch (e) {
-    showMessage('오류가 발생했습니다: ' + e.message);
+    // 429 에러 발생 시 친절한 안내 메시지 출력
+    if (e.status === 429 || e.message.includes('429')) {
+      showMessage('무료 API 요청 한도를 초과했습니다. 1분 정도 기다린 후 다시 시도해주세요!');
+    } else {
+      // 이제 숨겨져 있던 '진짜 에러 원인'을 화면에 보여줍니다.
+      showMessage('오류: ' + e.message);
+    }
   } finally {
     setLoading(false);
     document.getElementById('generateBtn').disabled = false;
