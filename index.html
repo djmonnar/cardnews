@@ -50,18 +50,21 @@
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
   }
-  .api-status {
+  .api-btn {
     display: flex;
     align-items: center;
     gap: 6px;
     padding: 7px 14px;
     border-radius: 8px;
-    border: 1px solid #22c55e;
-    background: rgba(34,197,94,.08);
-    color: #22c55e;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text2);
     font-size: 13px;
-    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s;
   }
+  .api-btn:hover { border-color: var(--accent); color: var(--text); }
+  .api-btn.active { border-color: #22c55e; color: #22c55e; background: rgba(34,197,94,.08); }
 
   /* 메인 레이아웃 */
   .main {
@@ -276,6 +279,21 @@
     border-radius: 10px; font-size: 12px; color: var(--text2); line-height: 1.6;
   }
 
+  /* 모달 */
+  .modal-backdrop {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 100;
+    align-items: center; justify-content: center; padding: 16px;
+  }
+  .modal-backdrop.show { display: flex; }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 20px;
+    padding: 28px; width: 100%; max-width: 420px; box-shadow: 0 40px 100px rgba(0,0,0,.6);
+  }
+  .modal h2 { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+  .modal p { font-size: 13px; color: var(--text3); line-height: 1.6; margin-bottom: 16px; }
+  .modal-close { float: right; background: none; border: none; color: var(--text3); font-size: 20px; cursor: pointer; line-height: 1; padding: 0; }
+  .modal-close:hover { color: var(--text); }
+
   /* 커스텀 토스트 알림 (alert 대체) */
   #toast {
     position: fixed; top: 80px; left: 50%; transform: translateX(-50%);
@@ -302,11 +320,26 @@
 <!-- 헤더 -->
 <header>
   <div class="logo">카드뉴스 메이커</div>
-  <div class="api-status">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-    <span>AI 연동 완료</span>
-  </div>
+  <button class="api-btn" id="apiBtn" onclick="openApiModal()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93A10 10 0 0 0 12 2C6.48 2 2 6.48 2 12s4.48 10 10 10a10 10 0 0 0 7.07-2.93"/></svg>
+    <span id="apiLabel">API 키 설정</span>
+  </button>
 </header>
+
+<!-- API 키 모달 -->
+<div class="modal-backdrop" id="apiModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeApiModal()">✕</button>
+    <h2>🔑 Gemini API 키 설정</h2>
+    <p>Google AI Studio에서 무료로 발급받은 API 키를 입력하세요.<br>키는 이 브라우저에만 저장됩니다.</p>
+    <div class="info-box" style="margin-bottom:14px;">
+      아직 키가 없다면 → <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com</a> 에서 무료 발급
+    </div>
+    <label>API 키</label>
+    <input type="password" id="apiKeyInput" placeholder="AIzaSy..." style="margin-bottom:12px;" />
+    <button class="btn-primary" onclick="saveApiKey()">적용하기</button>
+  </div>
+</div>
 
 <!-- 메인 -->
 <div class="main">
@@ -490,6 +523,7 @@
 <script>
 // ===== 설정 및 상태 =====
 const apiKey = ""; // 실행 환경에서 자동으로 처리됩니다.
+let customApiKey = localStorage.getItem('gemini_key') || '';
 let brandColor = '#5b6af0';
 let fontFamily = '"Noto Sans KR", sans-serif';
 let selectedTone = '전문적이고 신뢰감 있게';
@@ -503,6 +537,28 @@ let slides = [
   { layout: 'text_only', title: '포인트 메시지를\n강조해보세요', content: '텍스트 강조 레이아웃은\n메시지를 부각시킵니다.', image: null, titleSize: 75, contentSize: 40, titleAlign: 'left', contentAlign: 'left' },
   { layout: 'image_bottom', title: '마무리 슬라이드', content: '감사합니다!\n더 궁금한 점은 문의해주세요.', image: null, titleSize: 65, contentSize: 40, titleAlign: 'left', contentAlign: 'left' },
 ];
+
+// ===== API 키 모달 함수 =====
+function openApiModal() { document.getElementById('apiModal').classList.add('show'); }
+function closeApiModal() { document.getElementById('apiModal').classList.remove('show'); }
+document.getElementById('apiModal').addEventListener('click', function(e) { if (e.target === this) closeApiModal(); });
+
+function saveApiKey() {
+  const val = document.getElementById('apiKeyInput').value.trim();
+  if (!val) { showMessage('API 키를 입력해주세요.'); return; }
+  customApiKey = val;
+  localStorage.setItem('gemini_key', val);
+  document.getElementById('apiBtn').classList.add('active');
+  document.getElementById('apiLabel').textContent = '✓ 연결됨';
+  closeApiModal();
+  showMessage('API 키가 저장되었습니다.', true);
+}
+
+if (customApiKey) {
+  document.getElementById('apiKeyInput').value = customApiKey;
+  document.getElementById('apiBtn').classList.add('active');
+  document.getElementById('apiLabel').textContent = '✓ 연결됨';
+}
 
 // 커스텀 토스트 알림 함수 (alert 대체)
 function showMessage(msg, isSuccess = false) {
@@ -914,6 +970,13 @@ async function generateSlides() {
   const topic = document.getElementById('topicInput').value.trim();
   if (!topic) { showMessage('카드뉴스 주제를 입력해주세요!'); return; }
 
+  const finalKey = customApiKey || apiKey;
+  if (!finalKey) { 
+    showMessage('먼저 우측 상단에서 Gemini API 키를 설정해주세요!'); 
+    openApiModal();
+    return; 
+  }
+
   setLoading(true, 'AI가 기획 중...');
   document.getElementById('generateBtn').disabled = true;
 
@@ -923,8 +986,9 @@ async function generateSlides() {
 
     const prompt = `주제: "${topic}"\n문체: ${selectedTone}\n슬라이드 수: ${slideCount}장\n\n각 슬라이드의 제목과 본문을 작성해주세요. 제목은 2줄 이내, 본문은 핵심만 간결하게 3줄 이내로 작성하세요. 레이아웃은 순서대로 다음을 사용하세요: ${layoutSlice.join(', ')}`;
 
-    // 최신 모델 및 JSON 스키마 적용
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+    // 깃허브 등 외부에서는 최신 2.0-flash 사용, 캔버스 내부 환경은 전용 프리뷰 모델 사용
+    const modelName = customApiKey ? 'gemini-2.0-flash' : 'gemini-2.5-flash-preview-09-2025';
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${finalKey}`;
     
     const payload = {
       contents: [{ parts: [{ text: prompt }] }],
