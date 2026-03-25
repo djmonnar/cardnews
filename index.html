@@ -1,0 +1,1322 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>카드뉴스 메이커</title>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Nanum+Gothic:wght@400;700;800&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --border: #2e3248;
+    --accent: #5b6af0;
+    --accent2: #9b59f5;
+    --text: #e8eaf6;
+    --text2: #8890b5;
+    --text3: #5a6080;
+    --radius: 14px;
+    --brand: #5b6af0;
+  }
+
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* 헤더 */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 28px;
+    height: 60px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .logo {
+    font-family: 'Black Han Sans', sans-serif;
+    font-size: 20px;
+    letter-spacing: 2px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .api-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text2);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .api-btn:hover { border-color: var(--accent); color: var(--text); }
+  .api-btn.active { border-color: #22c55e; color: #22c55e; background: rgba(34,197,94,.08); }
+
+  /* 메인 레이아웃 */
+  .main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    height: calc(100vh - 60px);
+  }
+
+  /* 사이드바 */
+  .sidebar {
+    width: 360px;
+    flex-shrink: 0;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* 탭 */
+  .tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .tab {
+    flex: 1;
+    padding: 13px 8px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text3);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all .2s;
+    letter-spacing: .5px;
+  }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab:hover:not(.active) { color: var(--text2); }
+
+  .panel { display: none; flex: 1; overflow-y: auto; padding: 20px; }
+  .panel.active { display: flex; flex-direction: column; gap: 18px; }
+  .panel::-webkit-scrollbar { width: 4px; }
+  .panel::-webkit-scrollbar-track { background: transparent; }
+  .panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* 폼 요소들 */
+  label { font-size: 12px; font-weight: 700; color: var(--text2); letter-spacing: .5px; margin-bottom: 6px; display: block; }
+  textarea, input[type="text"], input[type="password"] {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 14px;
+    padding: 12px;
+    outline: none;
+    transition: border-color .2s;
+    resize: none;
+  }
+  textarea:focus, input:focus { border-color: var(--accent); }
+  textarea { line-height: 1.6; }
+
+  /* 버튼 */
+  .btn-primary {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity .2s, transform .1s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .btn-primary:hover { opacity: .88; }
+  .btn-primary:active { transform: scale(.98); }
+  .btn-primary:disabled { opacity: .45; cursor: not-allowed; }
+  .btn-secondary {
+    padding: 9px 16px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text2);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--text); }
+
+  /* 토글 */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+  .toggle-label { font-size: 13px; font-weight: 600; }
+  .toggle-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+  .toggle {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    background: var(--border);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background .2s;
+    flex-shrink: 0;
+  }
+  .toggle.on { background: var(--accent); }
+  .toggle::after {
+    content: '';
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    background: #fff;
+    border-radius: 50%;
+    top: 3px;
+    left: 3px;
+    transition: left .2s;
+  }
+  .toggle.on::after { left: 23px; }
+
+  /* 색상 팔레트 */
+  .color-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .color-dot {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 3px solid transparent;
+    transition: transform .15s, border-color .15s;
+  }
+  .color-dot:hover { transform: scale(1.15); }
+  .color-dot.selected { border-color: #fff; transform: scale(1.1); }
+
+  /* 폰트 선택 */
+  .font-option {
+    padding: 12px 14px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: border-color .2s;
+    font-size: 16px;
+  }
+  .font-option:hover { border-color: var(--text3); }
+  .font-option.selected { border-color: var(--accent); background: rgba(91,106,240,.1); }
+  .font-option-sub { font-size: 11px; color: var(--text3); margin-top: 3px; }
+
+  /* 톤 버튼 */
+  .tone-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .tone-btn {
+    padding: 10px 8px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text2);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    transition: all .2s;
+  }
+  .tone-btn:hover { border-color: var(--text3); color: var(--text); }
+  .tone-btn.selected { border-color: var(--accent); color: var(--accent); background: rgba(91,106,240,.1); }
+
+  /* 레이아웃 선택 */
+  .layout-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .layout-btn {
+    padding: 10px 8px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text2);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s;
+    text-align: center;
+  }
+  .layout-btn:hover { border-color: var(--text3); }
+  .layout-btn.selected { border-color: var(--accent); color: var(--accent); background: rgba(91,106,240,.1); }
+
+  /* 이미지 업로드 */
+  .upload-area {
+    border: 2px dashed var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .2s, background .2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .upload-area:hover { border-color: var(--accent); background: rgba(91,106,240,.05); }
+  .upload-area input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .upload-area img { max-height: 80px; border-radius: 6px; object-fit: cover; }
+  .upload-text { font-size: 12px; color: var(--text3); margin-top: 6px; }
+
+  /* 폰트 크기 슬라이더 */
+  .slider-row { display: flex; align-items: center; gap: 10px; }
+  .slider-val { font-size: 12px; font-weight: 700; color: var(--accent); min-width: 28px; text-align: right; }
+  input[type="range"] {
+    flex: 1;
+    -webkit-appearance: none;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--border);
+    outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+  }
+
+  /* 정렬 버튼 */
+  .align-row { display: flex; gap: 4px; }
+  .align-btn {
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text3);
+    transition: all .15s;
+  }
+  .align-btn:hover { border-color: var(--text3); color: var(--text2); }
+  .align-btn.selected { border-color: var(--accent); background: rgba(91,106,240,.15); color: var(--accent); }
+
+  /* 캔버스 영역 */
+  .canvas-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    gap: 20px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .canvas-wrap {
+    position: relative;
+    aspect-ratio: 1;
+    max-width: min(500px, calc(100vh - 200px));
+    width: 100%;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 30px 80px rgba(0,0,0,.6);
+    background: #fff;
+  }
+
+  canvas {
+    width: 100% !important;
+    height: 100% !important;
+    display: block;
+  }
+
+  /* 로딩 오버레이 */
+  .loading-overlay {
+    display: none;
+    position: absolute;
+    inset: 0;
+    background: rgba(15,17,23,.88);
+    border-radius: 16px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    z-index: 10;
+  }
+  .loading-overlay.show { display: flex; }
+  .spinner {
+    width: 44px;
+    height: 44px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-msg { font-size: 14px; font-weight: 600; color: var(--text2); }
+
+  /* 상단 버튼 */
+  .canvas-top-btns {
+    position: absolute;
+    top: 20px;
+    right: 24px;
+    display: flex;
+    gap: 8px;
+    z-index: 5;
+  }
+  .dl-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    transition: opacity .2s;
+  }
+  .dl-btn:hover { opacity: .85; }
+  .dl-btn.outline {
+    background: rgba(255,255,255,.06);
+    color: var(--text2);
+    border: 1px solid var(--border);
+  }
+  .dl-btn.fill {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff;
+  }
+
+  /* 썸네일 */
+  .thumbnails {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding: 4px;
+    max-width: min(540px, 95vw);
+    scrollbar-width: none;
+  }
+  .thumbnails::-webkit-scrollbar { display: none; }
+  .thumb {
+    flex-shrink: 0;
+    width: 68px;
+    height: 68px;
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: pointer;
+    border: 2px solid transparent;
+    background: var(--surface2);
+    transition: border-color .2s;
+    position: relative;
+  }
+  .thumb.active { border-color: var(--accent); }
+  .thumb canvas {
+    width: 68px !important;
+    height: 68px !important;
+    pointer-events: none;
+  }
+  .thumb-num {
+    position: absolute;
+    bottom: 3px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,.7);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+
+  /* 모달 */
+  .modal-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.7);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+  .modal-backdrop.show { display: flex; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 28px;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 40px 100px rgba(0,0,0,.6);
+  }
+  .modal h2 { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+  .modal p { font-size: 13px; color: var(--text3); line-height: 1.6; margin-bottom: 16px; }
+  .modal-close {
+    float: right;
+    background: none;
+    border: none;
+    color: var(--text3);
+    font-size: 20px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0;
+  }
+  .modal-close:hover { color: var(--text); }
+
+  /* 구분선 */
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 2px 0;
+  }
+
+  /* 경고 박스 */
+  .info-box {
+    padding: 12px 14px;
+    background: rgba(91,106,240,.08);
+    border: 1px solid rgba(91,106,240,.25);
+    border-radius: 10px;
+    font-size: 12px;
+    color: var(--text2);
+    line-height: 1.6;
+  }
+  .info-box a { color: var(--accent); text-decoration: none; }
+  .info-box a:hover { text-decoration: underline; }
+
+  /* 반응형 */
+  @media (max-width: 768px) {
+    .main { flex-direction: column; height: auto; }
+    .sidebar { width: 100%; height: auto; }
+    .canvas-area { padding: 16px; min-height: 400px; }
+    .canvas-top-btns { top: 10px; right: 10px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- 헤더 -->
+<header>
+  <div class="logo">카드뉴스 메이커</div>
+  <button class="api-btn" id="apiBtn" onclick="openApiModal()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93A10 10 0 0 0 12 2C6.48 2 2 6.48 2 12s4.48 10 10 10a10 10 0 0 0 7.07-2.93"/></svg>
+    <span id="apiLabel">API 키 설정</span>
+  </button>
+</header>
+
+<!-- API 키 모달 -->
+<div class="modal-backdrop" id="apiModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeApiModal()">✕</button>
+    <h2>🔑 Gemini API 키 설정</h2>
+    <p>Google AI Studio에서 무료로 발급받은 API 키를 입력하세요.<br>키는 이 브라우저에만 저장됩니다.</p>
+    <div class="info-box" style="margin-bottom:14px;">
+      아직 키가 없다면 → <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com</a> 에서 무료 발급 (로그인만 하면 바로 생성 가능)
+    </div>
+    <label>API 키</label>
+    <input type="password" id="apiKeyInput" placeholder="AIzaSy..." style="margin-bottom:12px;" />
+    <button class="btn-primary" onclick="saveApiKey()">적용하기</button>
+  </div>
+</div>
+
+<!-- 메인 -->
+<div class="main">
+
+  <!-- 사이드바 -->
+  <div class="sidebar">
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('plan')">🪄 기획</div>
+      <div class="tab" onclick="switchTab('design')">🎨 디자인</div>
+      <div class="tab" onclick="switchTab('edit')">✏️ 편집</div>
+    </div>
+
+    <!-- 기획 패널 -->
+    <div class="panel active" id="panel-plan">
+      <div>
+        <label>카드뉴스 주제</label>
+        <textarea id="topicInput" rows="3" placeholder="예: 우리 카페 신메뉴 딸기라떼 출시!&#10;예: 여름 맞이 의류 세일 50% 할인"></textarea>
+      </div>
+
+      <div>
+        <label style="margin-bottom:10px;">문체 선택</label>
+        <div class="tone-grid">
+          <div class="tone-btn selected" onclick="selectTone(this, '전문적이고 신뢰감 있게')">💼 전문적</div>
+          <div class="tone-btn" onclick="selectTone(this, '친근하고 다정하게')">☺️ 친근하게</div>
+          <div class="tone-btn" onclick="selectTone(this, '유머러스하고 재치있게')">😄 유머러스</div>
+          <div class="tone-btn" onclick="selectTone(this, '감성적이고 트렌디하게')">✨ 감성적</div>
+        </div>
+      </div>
+
+      <div>
+        <label>대표 이미지 (선택)</label>
+        <div class="upload-area" id="planImgArea">
+          <input type="file" accept="image/*" onchange="handlePlanImage(this)" />
+          <div id="planImgPreview">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#5a6080" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+            <div class="upload-text">사진을 추가하면 AI가 활용합니다 (선택)</div>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-primary" id="generateBtn" onclick="generateSlides()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>
+        AI로 자동 생성
+      </button>
+
+      <div class="info-box">
+        API 키가 없으면 생성이 안 돼요. 위 설정 버튼에서 Gemini API 키를 먼저 입력해주세요.
+      </div>
+    </div>
+
+    <!-- 디자인 패널 -->
+    <div class="panel" id="panel-design">
+      <div>
+        <label>브랜드 컬러</label>
+        <div class="color-row" id="colorRow">
+          <div class="color-dot selected" style="background:#5b6af0" onclick="selectColor(this,'#5b6af0')"></div>
+          <div class="color-dot" style="background:#ec4899" onclick="selectColor(this,'#ec4899')"></div>
+          <div class="color-dot" style="background:#ef4444" onclick="selectColor(this,'#ef4444')"></div>
+          <div class="color-dot" style="background:#f59e0b" onclick="selectColor(this,'#f59e0b')"></div>
+          <div class="color-dot" style="background:#10b981" onclick="selectColor(this,'#10b981')"></div>
+          <div class="color-dot" style="background:#3b82f6" onclick="selectColor(this,'#3b82f6')"></div>
+          <div class="color-dot" style="background:#1e293b" onclick="selectColor(this,'#1e293b')"></div>
+          <div class="color-dot" style="background:#7c3aed" onclick="selectColor(this,'#7c3aed')"></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:10px;">
+          <label style="margin:0;font-size:11px;">직접 입력</label>
+          <input type="color" id="customColorPicker" value="#5b6af0" style="width:40px;height:30px;padding:2px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;" oninput="applyCustomColor(this.value)" />
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div>
+        <label>폰트 스타일</label>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div class="font-option selected" style="font-family:'Noto Sans KR',sans-serif;" onclick="selectFont(this, '\"Noto Sans KR\", sans-serif')">
+            모던 스타일 <span class="font-option-sub">Noto Sans KR · 가독성 최고</span>
+          </div>
+          <div class="font-option" style="font-family:'Nanum Gothic',sans-serif;" onclick="selectFont(this, '\"Nanum Gothic\", sans-serif')">
+            클래식 스타일 <span class="font-option-sub">Nanum Gothic · 부드러운 느낌</span>
+          </div>
+          <div class="font-option" style="font-family:'Black Han Sans',sans-serif;" onclick="selectFont(this, '\"Black Han Sans\", sans-serif')">
+            임팩트 스타일 <span class="font-option-sub">Black Han Sans · 강렬한 헤드라인</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div>
+        <label style="margin-bottom:8px;">슬라이드 수</label>
+        <div style="display:flex;gap:8px;">
+          <button class="tone-btn selected" onclick="setSlideCount(this,3)">3장</button>
+          <button class="tone-btn" onclick="setSlideCount(this,4)">4장</button>
+          <button class="tone-btn" onclick="setSlideCount(this,5)">5장</button>
+          <button class="tone-btn" onclick="setSlideCount(this,6)">6장</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 편집 패널 -->
+    <div class="panel" id="panel-edit">
+      <div>
+        <label>레이아웃</label>
+        <div class="layout-grid">
+          <div class="layout-btn selected" onclick="selectLayout(this,'cover')">🖼 표지 (전체배경)</div>
+          <div class="layout-btn" onclick="selectLayout(this,'image_top')">⬆ 상단 이미지</div>
+          <div class="layout-btn" onclick="selectLayout(this,'image_bottom')">⬇ 하단 이미지</div>
+          <div class="layout-btn" onclick="selectLayout(this,'text_only')">📝 텍스트 강조</div>
+        </div>
+      </div>
+
+      <div>
+        <label>슬라이드 사진</label>
+        <div class="upload-area" id="slideImgArea">
+          <input type="file" accept="image/*" id="slideImgInput" onchange="handleSlideImage(this)" />
+          <div id="slideImgPreview">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5a6080" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+            <div class="upload-text">사진 추가 (선택)</div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+          <label style="margin:0;">제목 (Title)</label>
+          <div class="align-row">
+            <button class="align-btn selected" onclick="setAlign('titleAlign','left',this)" title="왼쪽">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18M3 12h12M3 18h18"/></svg>
+            </button>
+            <button class="align-btn" onclick="setAlign('titleAlign','center',this)" title="가운데">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18M7 12h10M3 18h18"/></svg>
+            </button>
+            <button class="align-btn" onclick="setAlign('titleAlign','right',this)" title="오른쪽">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18M9 12h12M3 18h18"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="slider-row" style="margin-bottom:6px;">
+          <span style="font-size:11px;color:var(--text3);">크기</span>
+          <input type="range" min="28" max="130" value="80" id="titleSizeSlider" oninput="updateTitleSize(this.value)" />
+          <span class="slider-val" id="titleSizeVal">80</span>
+        </div>
+        <textarea id="titleInput" rows="2" oninput="updateCurrentSlide('title', this.value)"></textarea>
+      </div>
+
+      <div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+          <label style="margin:0;">본문 (Content)</label>
+          <div class="align-row" id="contentAlignRow">
+            <button class="align-btn selected" onclick="setAlign('contentAlign','left',this,'contentAlignRow')" title="왼쪽">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18M3 12h12M3 18h18"/></svg>
+            </button>
+            <button class="align-btn" onclick="setAlign('contentAlign','center',this,'contentAlignRow')" title="가운데">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18M7 12h10M3 18h18"/></svg>
+            </button>
+            <button class="align-btn" onclick="setAlign('contentAlign','right',this,'contentAlignRow')" title="오른쪽">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18M9 12h12M3 18h18"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="slider-row" style="margin-bottom:6px;">
+          <span style="font-size:11px;color:var(--text3);">크기</span>
+          <input type="range" min="18" max="80" value="40" id="contentSizeSlider" oninput="updateContentSize(this.value)" />
+          <span class="slider-val" id="contentSizeVal">40</span>
+        </div>
+        <textarea id="contentInput" rows="3" oninput="updateCurrentSlide('content', this.value)"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- 캔버스 영역 -->
+  <div class="canvas-area">
+    <div class="canvas-top-btns">
+      <button class="dl-btn outline" onclick="downloadCurrent()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        현재 장
+      </button>
+      <button class="dl-btn fill" onclick="downloadAll()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        전체 저장
+      </button>
+    </div>
+
+    <div class="canvas-wrap" id="canvasWrap">
+      <canvas id="mainCanvas" width="1080" height="1080"></canvas>
+      <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+        <div class="loading-msg" id="loadingMsg">AI 기획 중...</div>
+      </div>
+    </div>
+
+    <div class="thumbnails" id="thumbnails"></div>
+  </div>
+
+</div>
+
+<script>
+// ===== 상태 =====
+let apiKey = localStorage.getItem('gemini_key') || 'AIzaSyAbDKYkLrVZBHvsUy4p_qmgVW7e-eRAKZM';
+let brandColor = '#5b6af0';
+let fontFamily = '"Noto Sans KR", sans-serif';
+let selectedTone = '전문적이고 신뢰감 있게';
+let slideCount = 4;
+let currentIdx = 0;
+let planImage = null; // base64
+
+let slides = [
+  { layout: 'cover', title: '카드뉴스\n제목을 입력하세요', content: 'AI로 자동 생성하거나\n직접 편집해보세요', image: null, titleSize: 80, contentSize: 42, titleAlign: 'center', contentAlign: 'center' },
+  { layout: 'image_top', title: '소제목을 입력하세요', content: '여기에 본문 내용을\n입력하면 됩니다.', image: null, titleSize: 62, contentSize: 40, titleAlign: 'left', contentAlign: 'left' },
+  { layout: 'text_only', title: '포인트 메시지를\n강조해보세요', content: '텍스트 강조 레이아웃은\n메시지를 부각시킵니다.', image: null, titleSize: 75, contentSize: 40, titleAlign: 'left', contentAlign: 'left' },
+  { layout: 'image_bottom', title: '마무리 슬라이드', content: '감사합니다!\n더 궁금한 점은 문의해주세요.', image: null, titleSize: 65, contentSize: 40, titleAlign: 'left', contentAlign: 'left' },
+];
+
+// ===== API 모달 =====
+function openApiModal() { document.getElementById('apiModal').classList.add('show'); }
+function closeApiModal() { document.getElementById('apiModal').classList.remove('show'); }
+document.getElementById('apiModal').addEventListener('click', function(e) { if (e.target === this) closeApiModal(); });
+
+function saveApiKey() {
+  const val = document.getElementById('apiKeyInput').value.trim();
+  if (!val) { alert('API 키를 입력해주세요.'); return; }
+  apiKey = val;
+  localStorage.setItem('gemini_key', val);
+  document.getElementById('apiBtn').classList.add('active');
+  document.getElementById('apiLabel').textContent = '✓ 연결됨';
+  closeApiModal();
+}
+
+// 저장된 키 복원
+if (apiKey) {
+  document.getElementById('apiKeyInput').value = apiKey;
+  document.getElementById('apiBtn').classList.add('active');
+  document.getElementById('apiLabel').textContent = '✓ 연결됨';
+}
+
+// ===== 탭 전환 =====
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    const names = ['plan', 'design', 'edit'];
+    t.classList.toggle('active', names[i] === name);
+  });
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  if (name === 'edit') refreshEditPanel();
+}
+
+// ===== 기획 패널 =====
+function selectTone(el, tone) {
+  document.querySelectorAll('.tone-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedTone = tone;
+}
+
+function handlePlanImage(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    planImage = e.target.result;
+    const preview = document.getElementById('planImgPreview');
+    preview.innerHTML = `<img src="${planImage}" style="max-height:80px;border-radius:6px;object-fit:cover;" /><div class="upload-text">이미지 변경</div>`;
+    // 1번 슬라이드에도 적용
+    slides[0].image = planImage;
+    renderSlide(currentIdx);
+    renderThumbnails();
+  };
+  reader.readAsDataURL(file);
+}
+
+// ===== 디자인 패널 =====
+function selectColor(el, color) {
+  document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('selected'));
+  el.classList.add('selected');
+  brandColor = color;
+  document.getElementById('customColorPicker').value = color;
+  renderSlide(currentIdx);
+  renderThumbnails();
+}
+function applyCustomColor(color) {
+  document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('selected'));
+  brandColor = color;
+  renderSlide(currentIdx);
+  renderThumbnails();
+}
+function selectFont(el, font) {
+  document.querySelectorAll('.font-option').forEach(f => f.classList.remove('selected'));
+  el.classList.add('selected');
+  fontFamily = font;
+  renderSlide(currentIdx);
+  renderThumbnails();
+}
+function setSlideCount(el, count) {
+  document.querySelectorAll('#panel-design .tone-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  slideCount = count;
+  // 슬라이드 수 조정
+  while (slides.length < count) {
+    slides.push({ layout: 'image_top', title: '슬라이드 ' + (slides.length+1), content: '내용을 입력하세요.', image: null, titleSize: 62, contentSize: 40, titleAlign: 'left', contentAlign: 'left' });
+  }
+  if (slides.length > count) slides = slides.slice(0, count);
+  if (currentIdx >= slides.length) currentIdx = slides.length - 1;
+  renderThumbnails();
+  renderSlide(currentIdx);
+}
+
+// ===== 편집 패널 =====
+function refreshEditPanel() {
+  const s = slides[currentIdx];
+  document.getElementById('titleInput').value = s.title || '';
+  document.getElementById('contentInput').value = s.content || '';
+  document.getElementById('titleSizeSlider').value = s.titleSize || 70;
+  document.getElementById('titleSizeVal').textContent = s.titleSize || 70;
+  document.getElementById('contentSizeSlider').value = s.contentSize || 40;
+  document.getElementById('contentSizeVal').textContent = s.contentSize || 40;
+
+  // 레이아웃 버튼
+  document.querySelectorAll('.layout-btn').forEach(b => {
+    const layouts = ['cover', 'image_top', 'image_bottom', 'text_only'];
+    const i = [...document.querySelectorAll('.layout-btn')].indexOf(b);
+    b.classList.toggle('selected', layouts[i] === s.layout);
+  });
+
+  // 정렬 버튼 (제목)
+  const tAligns = document.querySelectorAll('.align-btn');
+  const alignMap = { left: 0, center: 1, right: 2 };
+  tAligns.forEach((b, i) => { if (i < 3) b.classList.toggle('selected', i === (alignMap[s.titleAlign] ?? 0)); });
+
+  // 정렬 버튼 (본문)
+  const cRow = document.getElementById('contentAlignRow').querySelectorAll('.align-btn');
+  cRow.forEach((b, i) => b.classList.toggle('selected', i === (alignMap[s.contentAlign] ?? 0)));
+
+  // 이미지 미리보기
+  const preview = document.getElementById('slideImgPreview');
+  if (s.image) {
+    preview.innerHTML = `<img src="${s.image}" style="max-height:80px;width:100%;border-radius:6px;object-fit:cover;" /><div class="upload-text">이미지 변경</div>`;
+  } else {
+    preview.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5a6080" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg><div class="upload-text">사진 추가 (선택)</div>`;
+  }
+}
+
+function selectLayout(el, layout) {
+  document.querySelectorAll('.layout-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  slides[currentIdx].layout = layout;
+  renderSlide(currentIdx);
+  renderThumbnails();
+}
+
+function handleSlideImage(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    slides[currentIdx].image = e.target.result;
+    const preview = document.getElementById('slideImgPreview');
+    preview.innerHTML = `<img src="${e.target.result}" style="max-height:80px;width:100%;border-radius:6px;object-fit:cover;" /><div class="upload-text">이미지 변경</div>`;
+    renderSlide(currentIdx);
+    renderThumbnails();
+  };
+  reader.readAsDataURL(file);
+}
+
+function updateCurrentSlide(field, value) {
+  slides[currentIdx][field] = value;
+  renderSlide(currentIdx);
+  renderThumbnails();
+}
+
+function updateTitleSize(val) {
+  document.getElementById('titleSizeVal').textContent = val;
+  slides[currentIdx].titleSize = parseInt(val);
+  renderSlide(currentIdx);
+  renderThumbnails();
+}
+
+function updateContentSize(val) {
+  document.getElementById('contentSizeVal').textContent = val;
+  slides[currentIdx].contentSize = parseInt(val);
+  renderSlide(currentIdx);
+  renderThumbnails();
+}
+
+function setAlign(field, val, el, rowId) {
+  const row = rowId ? document.getElementById(rowId) : el.closest('.align-row');
+  row.querySelectorAll('.align-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  slides[currentIdx][field] = val;
+  renderSlide(currentIdx);
+  renderThumbnails();
+}
+
+// ===== 캔버스 렌더링 =====
+function loadImg(src) {
+  return new Promise(resolve => {
+    if (!src) { resolve(null); return; }
+    const img = new Image();
+    img.crossOrigin = 'Anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+}
+
+function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+  const lines = String(text || '').split('\n');
+  let curY = y;
+  lines.forEach(line => {
+    const words = line.split(' ');
+    let cur = '';
+    words.forEach((word, n) => {
+      const test = cur + word + ' ';
+      if (ctx.measureText(test).width > maxWidth && n > 0) {
+        ctx.fillText(cur.trim(), x, curY);
+        cur = word + ' ';
+        curY += lineHeight;
+      } else { cur = test; }
+    });
+    ctx.fillText(cur.trim(), x, curY);
+    curY += lineHeight;
+  });
+  return curY;
+}
+
+function drawRoundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x+r, y); ctx.lineTo(x+w-r, y);
+  ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+  ctx.lineTo(x+w, y+h-r);
+  ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+  ctx.lineTo(x+r, y+h);
+  ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+  ctx.lineTo(x, y+r);
+  ctx.quadraticCurveTo(x, y, x+r, y);
+  ctx.closePath();
+  ctx.fill();
+}
+
+async function renderToCanvas(canvas, slide, idx, total) {
+  const ctx = canvas.getContext('2d');
+  const W = 1080, H = 1080;
+  canvas.width = W; canvas.height = H;
+
+  const layout = slide.layout || 'image_top';
+  const tSize = slide.titleSize || 70;
+  const cSize = slide.contentSize || 40;
+  const tAlign = slide.titleAlign || 'left';
+  const cAlign = slide.contentAlign || 'left';
+  const font = fontFamily;
+  const color = brandColor;
+
+  const img = await loadImg(slide.image);
+
+  const getX = (align, margin=100, maxW=880) => {
+    if (align === 'center') return W/2;
+    if (align === 'right') return W - margin;
+    return margin;
+  };
+
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, W, H);
+
+  // ---- 레이아웃별 렌더링 ----
+  if (layout === 'cover') {
+    // 배경
+    if (img) {
+      const sc = Math.max(W/img.width, H/img.height);
+      ctx.drawImage(img, (W-img.width*sc)/2, (H-img.height*sc)/2, img.width*sc, img.height*sc);
+    } else {
+      ctx.fillStyle = color;
+      ctx.fillRect(0, 0, W, H);
+    }
+    // 어두운 오버레이
+    ctx.fillStyle = 'rgba(0,0,0,0.52)';
+    ctx.fillRect(0, 0, W, H);
+
+    // 슬라이드 번호
+    ctx.fillStyle = color;
+    drawRoundRect(ctx, W/2-55, 90, 110, 48, 24);
+    ctx.font = `bold 22px ${font}`;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#fff';
+    ctx.fillText(`${idx+1} / ${total}`, W/2, 122);
+
+    // 제목
+    ctx.font = `900 ${tSize}px ${font}`;
+    ctx.textAlign = tAlign;
+    ctx.fillStyle = '#fff';
+    const tX = getX(tAlign);
+    const tNextY = wrapText(ctx, slide.title, tX, 320, 880, tSize*1.3);
+
+    // 구분선
+    if (tAlign === 'center') {
+      ctx.fillStyle = color;
+      drawRoundRect(ctx, W/2-60, tNextY+20, 120, 5, 2.5);
+    }
+
+    // 본문
+    ctx.font = `${cSize}px ${font}`;
+    ctx.textAlign = cAlign;
+    ctx.fillStyle = '#dde4ff';
+    wrapText(ctx, slide.content, getX(cAlign), tNextY + 70, 860, cSize*1.5);
+  }
+
+  else if (layout === 'image_top') {
+    // 상단 이미지 절반
+    ctx.fillStyle = '#e2e8f0';
+    ctx.fillRect(0, 0, W, 520);
+    if (img) {
+      const sc = Math.max(W/img.width, 520/img.height);
+      ctx.save(); ctx.beginPath(); ctx.rect(0,0,W,520); ctx.clip();
+      ctx.drawImage(img, (W-img.width*sc)/2, (520-img.height*sc)/2, img.width*sc, img.height*sc);
+      ctx.restore();
+    }
+    // 슬라이드 번호
+    ctx.fillStyle = color;
+    drawRoundRect(ctx, W-150, 470, 110, 40, 20);
+    ctx.font = `bold 18px ${font}`;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#fff';
+    ctx.fillText(`${idx+1} / ${total}`, W-95, 496);
+
+    // 구분 강조 바
+    ctx.fillStyle = color;
+    ctx.fillRect(100, 560, 80, 6);
+
+    ctx.font = `900 ${tSize}px ${font}`;
+    ctx.textAlign = tAlign;
+    ctx.fillStyle = '#0f172a';
+    const tX = getX(tAlign);
+    const tNextY = wrapText(ctx, slide.title, tX, 630, 880, tSize*1.3);
+
+    ctx.font = `${cSize}px ${font}`;
+    ctx.textAlign = cAlign;
+    ctx.fillStyle = '#475569';
+    wrapText(ctx, slide.content, getX(cAlign), tNextY+30, 880, cSize*1.5);
+  }
+
+  else if (layout === 'image_bottom') {
+    ctx.fillStyle = '#e2e8f0';
+    ctx.fillRect(0, 560, W, 520);
+    if (img) {
+      const sc = Math.max(W/img.width, 520/img.height);
+      ctx.save(); ctx.beginPath(); ctx.rect(0,560,W,520); ctx.clip();
+      ctx.drawImage(img, (W-img.width*sc)/2, 560+(520-img.height*sc)/2, img.width*sc, img.height*sc);
+      ctx.restore();
+    }
+    // 슬라이드 번호
+    ctx.fillStyle = color;
+    drawRoundRect(ctx, W-150, 88, 110, 40, 20);
+    ctx.font = `bold 18px ${font}`;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#fff';
+    ctx.fillText(`${idx+1} / ${total}`, W-95, 114);
+
+    ctx.fillStyle = color;
+    ctx.fillRect(100, 150, 80, 6);
+
+    ctx.font = `900 ${tSize}px ${font}`;
+    ctx.textAlign = tAlign;
+    ctx.fillStyle = '#0f172a';
+    const tX = getX(tAlign);
+    const tNextY = wrapText(ctx, slide.title, tX, 220, 880, tSize*1.3);
+
+    ctx.font = `${cSize}px ${font}`;
+    ctx.textAlign = cAlign;
+    ctx.fillStyle = '#475569';
+    wrapText(ctx, slide.content, getX(cAlign), tNextY+30, 880, cSize*1.5);
+  }
+
+  else if (layout === 'text_only') {
+    ctx.fillStyle = color;
+    ctx.fillRect(0, 0, W, H);
+
+    // 흰색 내부 카드
+    ctx.fillStyle = '#fff';
+    drawRoundRect(ctx, 60, 60, W-120, H-120, 48);
+
+    // 슬라이드 번호
+    ctx.fillStyle = color;
+    ctx.font = `bold 18px ${font}`;
+    ctx.textAlign = 'center';
+    ctx.fillText(`${idx+1} / ${total}`, W/2, H-80);
+
+    // 인용 마크
+    ctx.font = `bold 180px ${font}`;
+    ctx.textAlign = 'left';
+    ctx.fillStyle = color;
+    ctx.globalAlpha = .12;
+    ctx.fillText('"', 110, 260);
+    ctx.globalAlpha = 1;
+
+    // 강조 바
+    ctx.fillStyle = color;
+    ctx.fillRect(120, 290, 70, 7);
+
+    ctx.font = `900 ${tSize}px ${font}`;
+    ctx.textAlign = tAlign;
+    ctx.fillStyle = '#0f172a';
+    const tX = getX(tAlign, 120, 840);
+    const tNextY = wrapText(ctx, slide.title, tX, 380, 840, tSize*1.3);
+
+    ctx.font = `${cSize}px ${font}`;
+    ctx.textAlign = cAlign;
+    ctx.fillStyle = '#475569';
+    wrapText(ctx, slide.content, getX(cAlign, 120, 840), tNextY+36, 840, cSize*1.5);
+  }
+}
+
+// 메인 캔버스 렌더링
+async function renderSlide(idx) {
+  const canvas = document.getElementById('mainCanvas');
+  await renderToCanvas(canvas, slides[idx], idx, slides.length);
+}
+
+// 썸네일 렌더링
+async function renderThumbnails() {
+  const container = document.getElementById('thumbnails');
+  container.innerHTML = '';
+  for (let i = 0; i < slides.length; i++) {
+    const thumb = document.createElement('div');
+    thumb.className = 'thumb' + (i === currentIdx ? ' active' : '');
+    thumb.onclick = (() => {
+      const idx = i;
+      return () => { currentIdx = idx; selectSlide(idx); };
+    })();
+
+    const c = document.createElement('canvas');
+    c.width = 1080; c.height = 1080;
+    await renderToCanvas(c, slides[i], i, slides.length);
+
+    const num = document.createElement('div');
+    num.className = 'thumb-num';
+    num.textContent = i + 1;
+
+    thumb.appendChild(c);
+    thumb.appendChild(num);
+    container.appendChild(thumb);
+  }
+}
+
+function selectSlide(idx) {
+  currentIdx = idx;
+  document.querySelectorAll('.thumb').forEach((t, i) => t.classList.toggle('active', i === idx));
+  renderSlide(idx);
+  refreshEditPanel();
+  switchTab('edit');
+}
+
+// ===== AI 생성 =====
+async function generateSlides() {
+  if (!apiKey) { alert('먼저 Gemini API 키를 설정해주세요!\n우측 상단 "API 키 설정" 버튼을 누르세요.'); openApiModal(); return; }
+  const topic = document.getElementById('topicInput').value.trim();
+  if (!topic) { alert('카드뉴스 주제를 입력해주세요!'); return; }
+
+  setLoading(true, 'AI가 기획 중...');
+  document.getElementById('generateBtn').disabled = true;
+
+  try {
+    const layouts = ['cover', 'image_top', 'text_only', 'image_bottom', 'image_top', 'text_only'];
+    const layoutSlice = layouts.slice(0, slideCount);
+
+    const prompt = `
+당신은 SNS 카드뉴스 전문 기획자입니다.
+주제: "${topic}"
+문체: ${selectedTone}
+슬라이드 수: ${slideCount}장
+
+다음 JSON 형식으로 ${slideCount}개의 슬라이드를 생성해주세요.
+레이아웃은 순서대로 정확히 사용하세요: ${JSON.stringify(layoutSlice)}
+
+반드시 아래 JSON만 출력하세요. 다른 텍스트는 절대 출력하지 마세요:
+{
+  "slides": [
+    {
+      "layout": "레이아웃",
+      "title": "제목 (줄바꿈은 \\n 사용, 2줄 이내)",
+      "content": "본문 (핵심만 간결하게, 3줄 이내)"
+    }
+  ]
+}
+`;
+
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.8, maxOutputTokens: 2048 }
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error?.message || 'API 오류');
+    }
+
+    const data = await res.json();
+    let text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+    // JSON 추출
+    const match = text.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error('AI 응답을 파싱할 수 없습니다. 다시 시도해주세요.');
+
+    const parsed = JSON.parse(match[0]);
+    if (!parsed.slides || !Array.isArray(parsed.slides)) throw new Error('슬라이드 데이터가 없습니다.');
+
+    // 슬라이드 업데이트
+    slides = parsed.slides.map((s, i) => ({
+      layout: s.layout || layoutSlice[i] || 'image_top',
+      title: s.title || '',
+      content: s.content || '',
+      image: i === 0 ? planImage : null,
+      titleSize: s.layout === 'cover' ? 80 : s.layout === 'text_only' ? 75 : 62,
+      contentSize: 40,
+      titleAlign: s.layout === 'cover' ? 'center' : 'left',
+      contentAlign: s.layout === 'cover' ? 'center' : 'left',
+    }));
+
+    currentIdx = 0;
+    await renderSlide(0);
+    await renderThumbnails();
+    switchTab('edit');
+    refreshEditPanel();
+
+  } catch (e) {
+    alert('오류가 발생했습니다:\n' + e.message);
+  } finally {
+    setLoading(false);
+    document.getElementById('generateBtn').disabled = false;
+  }
+}
+
+// ===== 로딩 =====
+function setLoading(show, msg='처리 중...') {
+  const overlay = document.getElementById('loadingOverlay');
+  document.getElementById('loadingMsg').textContent = msg;
+  overlay.classList.toggle('show', show);
+}
+
+// ===== 다운로드 =====
+function downloadCurrent() {
+  const canvas = document.getElementById('mainCanvas');
+  const link = document.createElement('a');
+  link.download = `카드뉴스_${currentIdx+1}.png`;
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+}
+
+async function downloadAll() {
+  setLoading(true, '전체 이미지 준비 중...');
+  const offscreen = document.createElement('canvas');
+  offscreen.width = 1080; offscreen.height = 1080;
+  for (let i = 0; i < slides.length; i++) {
+    setLoading(true, `${i+1} / ${slides.length} 저장 중...`);
+    await renderToCanvas(offscreen, slides[i], i, slides.length);
+    const link = document.createElement('a');
+    link.download = `카드뉴스_${i+1}.png`;
+    link.href = offscreen.toDataURL('image/png');
+    link.click();
+    await new Promise(r => setTimeout(r, 400));
+  }
+  setLoading(false);
+}
+
+// ===== 초기화 =====
+async function init() {
+  slideCount = 4;
+  await renderSlide(0);
+  await renderThumbnails();
+}
+
+init();
+</script>
+</body>
+</html>
