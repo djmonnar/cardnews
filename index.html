@@ -1,1019 +1,733 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>카드뉴스 메이커</title>
-<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Nanum+Gothic:wght@400;700;800&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
-<style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CardAI — 무료 AI 카드뉴스 생성기</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0b0b0b;
+      --surface: #141414;
+      --surface2: #1c1c1c;
+      --border: #282828;
+      --accent: #CCFF00;
+      --accent-dim: rgba(204,255,0,0.08);
+      --text: #efefef;
+      --muted: #707070;
+      --danger: #ff4545;
+      --font: 'Noto Sans KR', sans-serif;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:var(--font); background:var(--bg); color:var(--text); height:100vh; display:flex; flex-direction:column; overflow:hidden; }
 
-  :root {
-    --bg: #0f1117;
-    --surface: #1a1d27;
-    --surface2: #22263a;
-    --border: #2e3248;
-    --accent: #5b6af0;
-    --accent2: #9b59f5;
-    --text: #e8eaf6;
-    --text2: #8890b5;
-    --text3: #5a6080;
-    --radius: 14px;
-    --brand: #5b6af0;
-  }
+    /* ── HEADER ── */
+    .header { display:flex; align-items:center; justify-content:space-between; padding:12px 20px; background:var(--surface); border-bottom:1px solid var(--border); flex-shrink:0; }
+    .logo { font-size:20px; font-weight:900; letter-spacing:-0.5px; }
+    .logo em { color:var(--accent); font-style:normal; }
+    .header-right { display:flex; gap:8px; align-items:center; }
 
-  body {
-    font-family: 'Noto Sans KR', sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-  }
+    /* ── BUTTONS ── */
+    .btn { padding:8px 14px; border-radius:8px; font-family:var(--font); font-size:13px; font-weight:600; cursor:pointer; border:none; transition:all .15s; }
+    .btn-ghost { background:var(--surface2); color:var(--text); border:1px solid var(--border); }
+    .btn-ghost:hover { background:var(--border); }
+    .btn-accent { background:var(--accent); color:#000; font-weight:800; }
+    .btn-accent:hover { background:#aadd00; }
+    .btn-accent:disabled { opacity:.4; cursor:not-allowed; }
+    .btn-sm { padding:5px 10px; font-size:11px; }
+    .btn-full { width:100%; padding:13px; font-size:14px; border-radius:10px; }
 
-  /* 헤더 */
-  header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 28px;
-    height: 60px;
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-  }
-  .logo {
-    font-family: 'Black Han Sans', sans-serif;
-    font-size: 20px;
-    letter-spacing: 2px;
-    background: linear-gradient(135deg, var(--accent), var(--accent2));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
-  .api-btn {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 7px 14px;
-    border-radius: 8px;
-    border: 1px solid var(--border);
-    background: var(--surface2);
-    color: var(--text2);
-    font-size: 13px;
-    cursor: pointer;
-    transition: all .2s;
-  }
-  .api-btn:hover { border-color: var(--accent); color: var(--text); }
-  .api-btn.active { border-color: #22c55e; color: #22c55e; background: rgba(34,197,94,.08); }
+    /* ── LAYOUT ── */
+    .main { display:flex; flex:1; overflow:hidden; }
 
-  /* 메인 레이아웃 */
-  .main {
-    display: flex;
-    flex: 1;
-    overflow: hidden;
-    height: calc(100vh - 60px);
-  }
+    /* ── SIDEBAR ── */
+    .sidebar { width:300px; min-width:300px; background:var(--surface); border-right:1px solid var(--border); padding:18px; overflow-y:auto; display:flex; flex-direction:column; gap:18px; }
+    .sec-label { font-size:10px; font-weight:700; letter-spacing:1.5px; color:var(--muted); text-transform:uppercase; margin-bottom:8px; }
+    .field { display:flex; flex-direction:column; gap:5px; }
+    .field label { font-size:12px; color:var(--muted); font-weight:500; }
+    .field input, .field textarea, .field select {
+      background:var(--surface2); border:1px solid var(--border); border-radius:8px; color:var(--text);
+      font-family:var(--font); font-size:13px; padding:9px 12px; outline:none; transition:border-color .15s;
+    }
+    .field input:focus, .field textarea:focus, .field select:focus { border-color:var(--accent); }
+    .field textarea { resize:none; height:76px; line-height:1.5; }
+    .field select option { background:var(--surface2); }
 
-  /* 사이드바 */
-  .sidebar {
-    width: 360px;
-    flex-shrink: 0;
-    background: var(--surface);
-    border-right: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
+    /* count btns */
+    .count-row { display:flex; gap:6px; }
+    .cnt { flex:1; padding:8px; background:var(--surface2); border:1px solid var(--border); border-radius:7px;
+      color:var(--muted); font-family:var(--font); font-size:13px; cursor:pointer; transition:all .15s; text-align:center; font-weight:600; }
+    .cnt.on { background:var(--accent-dim); border-color:var(--accent); color:var(--accent); }
 
-  /* 탭 */
-  .tabs {
-    display: flex;
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-  }
-  .tab {
-    flex: 1;
-    padding: 13px 8px;
-    text-align: center;
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--text3);
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    transition: all .2s;
-    letter-spacing: .5px;
-  }
-  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
-  .tab:hover:not(.active) { color: var(--text2); }
+    /* template cards */
+    .tmpl-row { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+    .tc { border-radius:8px; cursor:pointer; border:2px solid transparent; overflow:hidden; transition:border-color .15s; }
+    .tc.on { border-color:var(--accent); }
+    .tc-preview { aspect-ratio:4/5; position:relative; }
+    .tc-label { font-size:9px; font-weight:700; text-align:center; color:var(--muted); padding:3px 0; }
 
-  .panel { display: none; flex: 1; overflow-y: auto; padding: 20px; }
-  .panel.active { display: flex; flex-direction: column; gap: 18px; }
-  .panel::-webkit-scrollbar { width: 4px; }
-  .panel::-webkit-scrollbar-track { background: transparent; }
-  .panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    /* warning */
+    .warn { background:rgba(255,170,0,.08); border:1px solid rgba(255,170,0,.25); border-radius:8px;
+      padding:10px 12px; font-size:11.5px; color:#ffaa00; line-height:1.6; }
+    .warn a { color:#ffaa00; }
 
-  /* 폼 요소들 */
-  label { font-size: 12px; font-weight: 700; color: var(--text2); letter-spacing: .5px; margin-bottom: 6px; display: block; }
-  textarea, input[type="text"], input[type="password"] {
-    width: 100%;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    color: var(--text);
-    font-family: 'Noto Sans KR', sans-serif;
-    font-size: 14px;
-    padding: 12px;
-    outline: none;
-    transition: border-color .2s;
-    resize: none;
-  }
-  textarea:focus, input:focus { border-color: var(--accent); }
-  textarea { line-height: 1.6; }
+    /* ── CANVAS AREA ── */
+    .canvas-area { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+    .c-toolbar { display:none; align-items:center; gap:12px; padding:10px 18px; border-bottom:1px solid var(--border); background:var(--surface); }
+    .c-toolbar.show { display:flex; }
+    .c-hint { font-size:12px; color:var(--muted); flex:1; }
+    .slides-wrap { flex:1; overflow-x:auto; overflow-y:hidden; display:flex; align-items:center; gap:18px; padding:28px; }
 
-  /* 버튼 */
-  .btn-primary {
-    width: 100%;
-    padding: 14px;
-    background: linear-gradient(135deg, var(--accent), var(--accent2));
-    color: #fff;
-    border: none;
-    border-radius: 12px;
-    font-family: 'Noto Sans KR', sans-serif;
-    font-size: 15px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: opacity .2s, transform .1s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-  }
-  .btn-primary:hover { opacity: .88; }
-  .btn-primary:active { transform: scale(.98); }
-  .btn-primary:disabled { opacity: .45; cursor: not-allowed; }
-  
-  /* 톤 버튼 */
-  .tone-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .tone-btn {
-    padding: 10px 8px;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    color: var(--text2);
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    text-align: center;
-    transition: all .2s;
-  }
-  .tone-btn:hover { border-color: var(--text3); color: var(--text); }
-  .tone-btn.selected { border-color: var(--accent); color: var(--accent); background: rgba(91,106,240,.1); }
+    /* slide wrapper */
+    .sw { display:flex; flex-direction:column; align-items:center; gap:8px; flex-shrink:0; }
+    .sw-num { font-size:11px; color:var(--muted); font-weight:600; }
+    .slide-card { width:252px; height:315px; position:relative; border-radius:12px; overflow:hidden;
+      box-shadow:0 8px 32px rgba(0,0,0,.5); transition:transform .2s, box-shadow .2s; }
+    .slide-card:hover { transform:translateY(-3px); box-shadow:0 14px 44px rgba(0,0,0,.65); }
+    .sw-actions { display:flex; gap:6px; }
 
-  /* 색상 팔레트 */
-  .color-row { display: flex; flex-wrap: wrap; gap: 10px; }
-  .color-dot {
-    width: 36px; height: 36px; border-radius: 50%; cursor: pointer;
-    border: 3px solid transparent; transition: transform .15s, border-color .15s;
-  }
-  .color-dot:hover { transform: scale(1.15); }
-  .color-dot.selected { border-color: #fff; transform: scale(1.1); }
+    /* empty */
+    .empty { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px;
+      color:var(--muted); height:100%; width:100%; text-align:center; }
+    .empty-icon { font-size:44px; opacity:.25; }
+    .empty h3 { font-size:17px; font-weight:600; }
+    .empty p { font-size:13px; opacity:.7; line-height:1.6; }
 
-  /* 폰트 선택 */
-  .font-option {
-    padding: 12px 14px; background: var(--surface2); border: 1px solid var(--border);
-    border-radius: 10px; cursor: pointer; transition: border-color .2s; font-size: 16px;
-  }
-  .font-option:hover { border-color: var(--text3); }
-  .font-option.selected { border-color: var(--accent); background: rgba(91,106,240,.1); }
-  .font-option-sub { font-size: 11px; color: var(--text3); margin-top: 3px; display: block;}
+    /* ── OVERLAY / LOADING ── */
+    .overlay { position:fixed; inset:0; background:rgba(0,0,0,.72); display:flex; flex-direction:column;
+      align-items:center; justify-content:center; z-index:100; gap:14px; }
+    .overlay.hide { display:none; }
+    .spinner { width:36px; height:36px; border:3px solid var(--border); border-top-color:var(--accent);
+      border-radius:50%; animation:spin .7s linear infinite; }
+    .ld-text { font-size:13px; color:var(--muted); }
+    @keyframes spin { to { transform:rotate(360deg); } }
 
-  /* 레이아웃 선택 */
-  .layout-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .layout-btn {
-    padding: 10px 8px; background: var(--surface2); border: 1px solid var(--border);
-    border-radius: 8px; color: var(--text2); font-size: 12px; font-weight: 600;
-    cursor: pointer; transition: all .2s; text-align: center;
-  }
-  .layout-btn:hover { border-color: var(--text3); }
-  .layout-btn.selected { border-color: var(--accent); color: var(--accent); background: rgba(91,106,240,.1); }
+    /* ── MODALS ── */
+    .modal-bg { position:fixed; inset:0; background:rgba(0,0,0,.65); display:flex; align-items:center;
+      justify-content:center; z-index:200; }
+    .modal-bg.hide { display:none; }
+    .modal { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:26px; width:440px; max-width:92vw; }
+    .modal h2 { font-size:17px; font-weight:700; margin-bottom:5px; }
+    .modal .sub { font-size:12px; color:var(--muted); margin-bottom:18px; line-height:1.6; }
+    .modal .sub a { color:var(--accent); text-decoration:none; }
+    .modal-foot { display:flex; justify-content:flex-end; gap:8px; margin-top:18px; }
 
-  /* 이미지 업로드 */
-  .upload-area {
-    border: 2px dashed var(--border); border-radius: 10px; padding: 16px;
-    text-align: center; cursor: pointer; transition: border-color .2s, background .2s;
-    position: relative; overflow: hidden;
-  }
-  .upload-area:hover { border-color: var(--accent); background: rgba(91,106,240,.05); }
-  .upload-area input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-  .upload-area img { max-height: 80px; border-radius: 6px; object-fit: cover; }
-  .upload-text { font-size: 12px; color: var(--text3); margin-top: 6px; }
+    /* img modal */
+    .img-modal { width:560px; }
+    .img-search { display:flex; gap:8px; margin-bottom:12px; }
+    .img-search input { flex:1; background:var(--surface2); border:1px solid var(--border); border-radius:8px;
+      color:var(--text); font-family:var(--font); font-size:13px; padding:8px 12px; outline:none; }
+    .img-search input:focus { border-color:var(--accent); }
+    .upload-row { font-size:12px; color:var(--muted); margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+    .upload-row input { font-size:12px; color:var(--muted); }
+    .img-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; max-height:280px; overflow-y:auto; }
+    .img-thumb { aspect-ratio:4/5; border-radius:7px; object-fit:cover; cursor:pointer;
+      border:2px solid transparent; transition:border-color .15s; width:100%; }
+    .img-thumb:hover { border-color:var(--accent); }
+    .ig-empty { grid-column:1/-1; text-align:center; color:var(--muted); padding:36px; font-size:12px; }
 
-  /* 슬라이더 & 정렬 */
-  .slider-row { display: flex; align-items: center; gap: 10px; }
-  .slider-val { font-size: 12px; font-weight: 700; color: var(--accent); min-width: 28px; text-align: right; }
-  input[type="range"] { flex: 1; -webkit-appearance: none; height: 4px; border-radius: 2px; background: var(--border); outline: none; }
-  input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--accent); cursor: pointer; }
-  
-  .align-row { display: flex; gap: 4px; }
-  .align-btn {
-    width: 32px; height: 32px; border: 1px solid var(--border); background: var(--surface2);
-    border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center;
-    color: var(--text3); transition: all .15s;
-  }
-  .align-btn:hover { border-color: var(--text3); color: var(--text2); }
-  .align-btn.selected { border-color: var(--accent); background: rgba(91,106,240,.15); color: var(--accent); }
+    /* toast */
+    .toast { position:fixed; bottom:20px; right:20px; background:var(--surface2); border:1px solid var(--border);
+      border-radius:10px; padding:11px 16px; font-size:13px; z-index:300; animation:sUp .25s ease;
+      max-width:260px; line-height:1.4; }
+    .toast.ok { border-color:var(--accent); color:var(--accent); }
+    .toast.err { border-color:var(--danger); color:var(--danger); }
+    @keyframes sUp { from { transform:translateY(12px); opacity:0; } to { transform:translateY(0); opacity:1; } }
 
-  /* 캔버스 영역 */
-  .canvas-area {
-    flex: 1; display: flex; flex-direction: column; align-items: center;
-    justify-content: center; padding: 24px; gap: 20px; overflow: hidden; position: relative;
-  }
-  .canvas-wrap {
-    position: relative; aspect-ratio: 1; max-width: min(500px, calc(100vh - 200px));
-    width: 100%; border-radius: 16px; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,.6); background: #fff;
-  }
-  canvas { width: 100% !important; height: 100% !important; display: block; }
-
-  /* 로딩 오버레이 */
-  .loading-overlay {
-    display: none; position: absolute; inset: 0; background: rgba(15,17,23,.88);
-    border-radius: 16px; flex-direction: column; align-items: center; justify-content: center; gap: 14px; z-index: 10;
-  }
-  .loading-overlay.show { display: flex; }
-  .spinner {
-    width: 44px; height: 44px; border: 3px solid var(--border); border-top-color: var(--accent);
-    border-radius: 50%; animation: spin .8s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .loading-msg { font-size: 14px; font-weight: 600; color: var(--text2); }
-
-  /* 상단 버튼 */
-  .canvas-top-btns { position: absolute; top: 20px; right: 24px; display: flex; gap: 8px; z-index: 5; }
-  .dl-btn {
-    display: flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: 10px;
-    font-size: 13px; font-weight: 700; cursor: pointer; border: none; transition: opacity .2s;
-  }
-  .dl-btn:hover { opacity: .85; }
-  .dl-btn.outline { background: rgba(255,255,255,.06); color: var(--text2); border: 1px solid var(--border); }
-  .dl-btn.fill { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff; }
-
-  /* 썸네일 */
-  .thumbnails {
-    display: flex; gap: 10px; overflow-x: auto; padding: 4px; max-width: min(540px, 95vw); scrollbar-width: none;
-  }
-  .thumbnails::-webkit-scrollbar { display: none; }
-  .thumb {
-    flex-shrink: 0; width: 68px; height: 68px; border-radius: 10px; overflow: hidden;
-    cursor: pointer; border: 2px solid transparent; background: var(--surface2); transition: border-color .2s; position: relative;
-  }
-  .thumb.active { border-color: var(--accent); }
-  .thumb canvas { width: 68px !important; height: 68px !important; pointer-events: none; }
-  .thumb-num {
-    position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%);
-    background: rgba(0,0,0,.7); color: #fff; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px;
-  }
-
-  .divider { height: 1px; background: var(--border); margin: 2px 0; }
-  .info-box {
-    padding: 12px 14px; background: rgba(91,106,240,.08); border: 1px solid rgba(91,106,240,.25);
-    border-radius: 10px; font-size: 12px; color: var(--text2); line-height: 1.6;
-  }
-
-  /* 모달 */
-  .modal-backdrop {
-    display: none; position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 100;
-    align-items: center; justify-content: center; padding: 16px;
-  }
-  .modal-backdrop.show { display: flex; }
-  .modal {
-    background: var(--surface); border: 1px solid var(--border); border-radius: 20px;
-    padding: 28px; width: 100%; max-width: 420px; box-shadow: 0 40px 100px rgba(0,0,0,.6);
-  }
-  .modal h2 { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
-  .modal p { font-size: 13px; color: var(--text3); line-height: 1.6; margin-bottom: 16px; }
-  .modal-close { float: right; background: none; border: none; color: var(--text3); font-size: 20px; cursor: pointer; line-height: 1; padding: 0; }
-  .modal-close:hover { color: var(--text); }
-
-  /* 커스텀 토스트 알림 (alert 대체) */
-  #toast {
-    position: fixed; top: 80px; left: 50%; transform: translateX(-50%);
-    background: #ef4444; color: white; padding: 12px 24px; border-radius: 8px;
-    font-size: 14px; font-weight: 600; z-index: 1000; opacity: 0; pointer-events: none;
-    transition: opacity 0.3s, top 0.3s; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-  }
-  #toast.show { opacity: 1; top: 100px; }
-  #toast.success { background: #10b981; }
-
-  @media (max-width: 768px) {
-    .main { flex-direction: column; height: auto; }
-    .sidebar { width: 100%; height: auto; }
-    .canvas-area { padding: 16px; min-height: 400px; }
-    .canvas-top-btns { top: 10px; right: 10px; }
-  }
-</style>
+    /* editable */
+    [contenteditable="true"] { outline:none; cursor:text; }
+    [contenteditable="true"]:focus { background:rgba(255,255,255,.06); border-radius:3px; }
+    ::-webkit-scrollbar { width:5px; height:5px; }
+    ::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+  </style>
 </head>
 <body>
 
-<!-- 토스트 메시지 창 -->
-<div id="toast">메시지</div>
+<!-- Loading -->
+<div class="overlay hide" id="ldOverlay">
+  <div class="spinner"></div>
+  <div class="ld-text" id="ldText">처리 중...</div>
+</div>
 
-<!-- 헤더 (API 키 입력 모달 제거, 상태 표시 텍스트로 대체) -->
-<header>
-  <div class="logo">카드뉴스 메이커</div>
-  <div class="api-btn" style="cursor: default; border-color: #22c55e; color: #22c55e; background: rgba(34,197,94,.08);">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-    <span>Vercel 서버 연동됨</span>
+<!-- API Settings Modal -->
+<div class="modal-bg hide" id="apiModal">
+  <div class="modal">
+    <h2>🔑 API 키 설정</h2>
+    <p class="sub">
+      두 가지 무료 API 키로 모든 기능을 이용할 수 있어요.<br>
+      입력하면 브라우저에 저장되어 다음에 자동으로 불러와요.
+    </p>
+    <div class="field" style="margin-bottom:14px;">
+      <label>Gemini API 키 (AI 글 생성) — 무료</label>
+      <input type="password" id="gkInput" placeholder="AIza...">
+      <small style="font-size:11px;color:var(--muted);margin-top:3px;">
+        👉 <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--accent);">aistudio.google.com</a> 에서 무료 발급
+      </small>
+    </div>
+    <div class="field">
+      <label>Pexels API 키 (무료 이미지 자동 검색)</label>
+      <input type="password" id="pkInput" placeholder="...">
+      <small style="font-size:11px;color:var(--muted);margin-top:3px;">
+        👉 <a href="https://www.pexels.com/api/" target="_blank" style="color:var(--accent);">pexels.com/api</a> 에서 무료 발급 (이미지 없이도 사용 가능)
+      </small>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('apiModal')">닫기</button>
+      <button class="btn btn-accent" onclick="saveKeys()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- Image Picker Modal -->
+<div class="modal-bg hide" id="imgModal">
+  <div class="modal img-modal">
+    <h2>🖼️ 이미지 변경</h2>
+    <div class="img-search">
+      <input type="text" id="imgQ" placeholder="검색어 입력 (영어 권장, 예: korean food)..." onkeydown="if(event.key==='Enter')searchImg()">
+      <button class="btn btn-accent btn-sm" onclick="searchImg()">검색</button>
+    </div>
+    <div class="upload-row">
+      <span>또는 직접 올리기:</span>
+      <input type="file" accept="image/*" onchange="uploadImg(event)">
+    </div>
+    <div class="img-grid" id="imgGrid">
+      <div class="ig-empty">검색하면 Pexels 무료 이미지가 표시됩니다 🔍</div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('imgModal')">취소</button>
+    </div>
+  </div>
+</div>
+
+<!-- Header -->
+<header class="header">
+  <div class="logo">Card<em>AI</em></div>
+  <div class="header-right">
+    <button class="btn btn-ghost btn-sm" onclick="openModal('apiModal', initApiModal)">🔑 API 설정</button>
+    <button class="btn btn-ghost btn-sm" id="dlAllBtn" style="display:none" onclick="downloadAll()">⬇️ 전체 PNG</button>
   </div>
 </header>
 
-<!-- 메인 -->
+<!-- Main -->
 <div class="main">
-  <!-- 사이드바 -->
-  <div class="sidebar">
-    <div class="tabs">
-      <div class="tab active" onclick="switchTab('plan')">🪄 기획</div>
-      <div class="tab" onclick="switchTab('design')">🎨 디자인</div>
-      <div class="tab" onclick="switchTab('edit')">✏️ 편집</div>
-    </div>
-
-    <!-- 기획 패널 -->
-    <div class="panel active" id="panel-plan">
-      <div>
-        <label>카드뉴스 주제</label>
-        <textarea id="topicInput" rows="3" placeholder="예: 우리 카페 신메뉴 딸기라떼 출시!&#10;예: 여름 맞이 의류 세일 50% 할인"></textarea>
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <!-- 콘텐츠 설정 -->
+    <div>
+      <div class="sec-label">콘텐츠 설정</div>
+      <div class="field" style="margin-bottom:12px;">
+        <label>주제 / 키워드</label>
+        <textarea id="topicInput" placeholder="예: 소상공인을 위한 인스타그램 마케팅 꿀팁"></textarea>
       </div>
-
-      <div>
-        <label style="margin-bottom:10px;">문체 선택</label>
-        <div class="tone-grid">
-          <div class="tone-btn selected" onclick="selectTone(this, '전문적이고 신뢰감 있게')">💼 전문적</div>
-          <div class="tone-btn" onclick="selectTone(this, '친근하고 다정하게')">☺️ 친근하게</div>
-          <div class="tone-btn" onclick="selectTone(this, '유머러스하고 재치있게')">😄 유머러스</div>
-          <div class="tone-btn" onclick="selectTone(this, '감성적이고 트렌디하게')">✨ 감성적</div>
-        </div>
+      <div class="field" style="margin-bottom:12px;">
+        <label>톤 & 스타일</label>
+        <select id="toneSelect">
+          <option value="informative">📚 정보형 — 유익하고 명확하게</option>
+          <option value="casual">😊 친근형 — 편하게 말 걸듯</option>
+          <option value="professional">💼 전문형 — 신뢰감 있게</option>
+          <option value="exciting">🔥 흥미형 — 강렬하게 끌어당기기</option>
+        </select>
       </div>
-
-      <div>
-        <label>대표 이미지 (선택)</label>
-        <div class="upload-area" id="planImgArea">
-          <input type="file" accept="image/*" onchange="handlePlanImage(this)" />
-          <div id="planImgPreview">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#5a6080" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
-            <div class="upload-text">사진을 추가하면 커버에 활용됩니다</div>
-          </div>
-        </div>
-      </div>
-
-      <button class="btn-primary" id="generateBtn" onclick="generateSlides()">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>
-        AI로 자동 생성
-      </button>
-    </div>
-
-    <!-- 디자인 패널 -->
-    <div class="panel" id="panel-design">
-      <div>
-        <label>브랜드 컬러</label>
-        <div class="color-row" id="colorRow">
-          <div class="color-dot selected" style="background:#5b6af0" onclick="selectColor(this,'#5b6af0')"></div>
-          <div class="color-dot" style="background:#ec4899" onclick="selectColor(this,'#ec4899')"></div>
-          <div class="color-dot" style="background:#ef4444" onclick="selectColor(this,'#ef4444')"></div>
-          <div class="color-dot" style="background:#f59e0b" onclick="selectColor(this,'#f59e0b')"></div>
-          <div class="color-dot" style="background:#10b981" onclick="selectColor(this,'#10b981')"></div>
-          <div class="color-dot" style="background:#3b82f6" onclick="selectColor(this,'#3b82f6')"></div>
-          <div class="color-dot" style="background:#1e293b" onclick="selectColor(this,'#1e293b')"></div>
-          <div class="color-dot" style="background:#7c3aed" onclick="selectColor(this,'#7c3aed')"></div>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;margin-top:10px;">
-          <label style="margin:0;font-size:11px;">직접 입력</label>
-          <input type="color" id="customColorPicker" value="#5b6af0" style="width:40px;height:30px;padding:2px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;" oninput="applyCustomColor(this.value)" />
-        </div>
-      </div>
-
-      <div class="divider"></div>
-
-      <div>
-        <label>폰트 스타일</label>
-        <div style="display:flex;flex-direction:column;gap:8px;">
-          <div class="font-option selected" style="font-family:'Noto Sans KR',sans-serif;" onclick="selectFont(this, '\"Noto Sans KR\", sans-serif')">
-            모던 스타일 <span class="font-option-sub">Noto Sans KR · 가독성 최고</span>
-          </div>
-          <div class="font-option" style="font-family:'Nanum Gothic',sans-serif;" onclick="selectFont(this, '\"Nanum Gothic\", sans-serif')">
-            클래식 스타일 <span class="font-option-sub">Nanum Gothic · 부드러운 느낌</span>
-          </div>
-          <div class="font-option" style="font-family:'Black Han Sans',sans-serif;" onclick="selectFont(this, '\"Black Han Sans\", sans-serif')">
-            임팩트 스타일 <span class="font-option-sub">Black Han Sans · 강렬한 헤드라인</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="divider"></div>
-
-      <div>
-        <label style="margin-bottom:8px;">슬라이드 수</label>
-        <div style="display:flex;gap:8px;">
-          <button class="tone-btn" onclick="setSlideCount(this,3)">3장</button>
-          <button class="tone-btn selected" onclick="setSlideCount(this,4)">4장</button>
-          <button class="tone-btn" onclick="setSlideCount(this,5)">5장</button>
-          <button class="tone-btn" onclick="setSlideCount(this,6)">6장</button>
+      <div class="field">
+        <label>슬라이드 수</label>
+        <div class="count-row">
+          <button class="cnt" onclick="setCount(3)">3장</button>
+          <button class="cnt on" onclick="setCount(5)">5장</button>
+          <button class="cnt" onclick="setCount(7)">7장</button>
         </div>
       </div>
     </div>
 
-    <!-- 편집 패널 -->
-    <div class="panel" id="panel-edit">
-      <div>
-        <label>레이아웃</label>
-        <div class="layout-grid">
-          <div class="layout-btn selected" onclick="selectLayout(this,'cover')">🖼 표지 (전체배경)</div>
-          <div class="layout-btn" onclick="selectLayout(this,'image_top')">⬆ 상단 이미지</div>
-          <div class="layout-btn" onclick="selectLayout(this,'image_bottom')">⬇ 하단 이미지</div>
-          <div class="layout-btn" onclick="selectLayout(this,'text_only')">📝 텍스트 강조</div>
-        </div>
-      </div>
-
-      <div>
-        <label>슬라이드 사진</label>
-        <div class="upload-area" id="slideImgArea">
-          <input type="file" accept="image/*" id="slideImgInput" onchange="handleSlideImage(this)" />
-          <div id="slideImgPreview">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5a6080" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
-            <div class="upload-text">사진 추가 (선택)</div>
+    <!-- 템플릿 -->
+    <div>
+      <div class="sec-label">디자인 템플릿</div>
+      <div class="tmpl-row">
+        <div class="tc on" id="tc-dark" onclick="setTmpl('dark')">
+          <div class="tc-preview" style="background:linear-gradient(to top,#000 0%,#333 100%);">
+            <div style="position:absolute;bottom:0;padding:8px;width:100%;">
+              <div style="background:var(--accent);height:2px;width:18px;margin-bottom:4px;border-radius:1px;"></div>
+              <div style="background:rgba(255,255,255,.9);height:5px;border-radius:2px;margin-bottom:3px;"></div>
+              <div style="background:rgba(255,255,255,.4);height:3px;border-radius:2px;width:65%;"></div>
+            </div>
           </div>
+          <div class="tc-label">다크</div>
         </div>
-      </div>
-
-      <div>
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-          <label style="margin:0;">제목 (Title)</label>
-          <div class="align-row">
-            <button class="align-btn selected" onclick="setAlign('titleAlign','left',this)" title="왼쪽"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18M3 12h12M3 18h18"/></svg></button>
-            <button class="align-btn" onclick="setAlign('titleAlign','center',this)" title="가운데"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18M7 12h10M3 18h18"/></svg></button>
-            <button class="align-btn" onclick="setAlign('titleAlign','right',this)" title="오른쪽"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18M9 12h12M3 18h18"/></svg></button>
+        <div class="tc" id="tc-clean" onclick="setTmpl('clean')">
+          <div class="tc-preview" style="background:#fff;">
+            <div style="background:#ccc;height:52%;"></div>
+            <div style="background:#fff;padding:6px;">
+              <div style="background:var(--accent);height:2px;width:14px;margin-bottom:4px;border-radius:1px;"></div>
+              <div style="background:#222;height:5px;border-radius:2px;margin-bottom:3px;"></div>
+              <div style="background:#aaa;height:3px;border-radius:2px;width:70%;"></div>
+            </div>
           </div>
+          <div class="tc-label">클린</div>
         </div>
-        <div class="slider-row" style="margin-bottom:6px;">
-          <span style="font-size:11px;color:var(--text3);">크기</span>
-          <input type="range" min="28" max="130" value="80" id="titleSizeSlider" oninput="updateTitleSize(this.value)" />
-          <span class="slider-val" id="titleSizeVal">80</span>
-        </div>
-        <textarea id="titleInput" rows="2" oninput="updateCurrentSlide('title', this.value)"></textarea>
-      </div>
-
-      <div>
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-          <label style="margin:0;">본문 (Content)</label>
-          <div class="align-row" id="contentAlignRow">
-            <button class="align-btn selected" onclick="setAlign('contentAlign','left',this,'contentAlignRow')" title="왼쪽"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18M3 12h12M3 18h18"/></svg></button>
-            <button class="align-btn" onclick="setAlign('contentAlign','center',this,'contentAlignRow')" title="가운데"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18M7 12h10M3 18h18"/></svg></button>
-            <button class="align-btn" onclick="setAlign('contentAlign','right',this,'contentAlignRow')" title="오른쪽"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18M9 12h12M3 18h18"/></svg></button>
+        <div class="tc" id="tc-gradient" onclick="setTmpl('gradient')">
+          <div class="tc-preview" style="background:linear-gradient(135deg,#667eea,#764ba2);">
+            <div style="position:absolute;bottom:0;padding:8px;width:100%;">
+              <div style="background:rgba(255,255,255,.95);height:5px;border-radius:2px;margin-bottom:3px;"></div>
+              <div style="background:rgba(255,255,255,.5);height:3px;border-radius:2px;width:65%;"></div>
+            </div>
           </div>
+          <div class="tc-label">그라디언트</div>
         </div>
-        <div class="slider-row" style="margin-bottom:6px;">
-          <span style="font-size:11px;color:var(--text3);">크기</span>
-          <input type="range" min="18" max="80" value="40" id="contentSizeSlider" oninput="updateContentSize(this.value)" />
-          <span class="slider-val" id="contentSizeVal">40</span>
-        </div>
-        <textarea id="contentInput" rows="3" oninput="updateCurrentSlide('content', this.value)"></textarea>
       </div>
     </div>
-  </div>
 
-  <!-- 캔버스 영역 -->
+    <!-- 경고 -->
+    <div class="warn" id="apiWarn" style="display:none">
+      ⚠️ Gemini API 키가 없으면 생성이 안 돼요.<br>
+      상단 <strong>🔑 API 설정</strong>에서 입력해주세요.<br>
+      <a href="https://aistudio.google.com/app/apikey" target="_blank">무료 발급 바로가기 →</a>
+    </div>
+
+    <button class="btn btn-accent btn-full" onclick="generate()" id="genBtn">✨ 카드뉴스 생성</button>
+  </aside>
+
+  <!-- Canvas -->
   <div class="canvas-area">
-    <div class="canvas-top-btns">
-      <button class="dl-btn outline" onclick="downloadCurrent()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        현재 장
-      </button>
-      <button class="dl-btn fill" onclick="downloadAll()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        전체 저장
-      </button>
+    <div class="c-toolbar" id="cToolbar">
+      <span class="c-hint">✏️ 텍스트를 클릭하면 바로 편집 가능해요</span>
     </div>
-
-    <div class="canvas-wrap" id="canvasWrap">
-      <canvas id="mainCanvas" width="1080" height="1080"></canvas>
-      <div class="loading-overlay" id="loadingOverlay">
-        <div class="spinner"></div>
-        <div class="loading-msg" id="loadingMsg">AI 기획 중...</div>
+    <div class="slides-wrap" id="slidesWrap">
+      <div class="empty">
+        <div class="empty-icon">🎴</div>
+        <h3>아직 슬라이드가 없어요</h3>
+        <p>왼쪽에 주제를 입력하고<br>✨ 카드뉴스 생성을 눌러보세요</p>
       </div>
     </div>
-
-    <div class="thumbnails" id="thumbnails"></div>
   </div>
-
 </div>
 
 <script>
-// ===== 설정 및 상태 =====
-// 프론트엔드 코드에서는 API 키 변수들을 모두 삭제하여 유출을 원천 차단합니다.
-let brandColor = '#5b6af0';
-let fontFamily = '"Noto Sans KR", sans-serif';
-let selectedTone = '전문적이고 신뢰감 있게';
-let slideCount = 4;
-let currentIdx = 0;
-let planImage = null; // base64
+// ═══════════════════════ STATE ═══════════════════════
+const S = {
+  slides: [],
+  tmpl: 'dark',
+  count: 5,
+  targetSlide: null,
+  gk: localStorage.getItem('cai_gk') || '',
+  pk: localStorage.getItem('cai_pk') || '',
+};
 
-let slides = [
-  { layout: 'cover', title: '카드뉴스\n제목을 입력하세요', content: 'AI로 자동 생성하거나\n직접 편집해보세요', image: null, titleSize: 80, contentSize: 42, titleAlign: 'center', contentAlign: 'center' },
-  { layout: 'image_top', title: '소제목을 입력하세요', content: '여기에 본문 내용을\n입력하면 됩니다.', image: null, titleSize: 62, contentSize: 40, titleAlign: 'left', contentAlign: 'left' },
-  { layout: 'text_only', title: '포인트 메시지를\n강조해보세요', content: '텍스트 강조 레이아웃은\n메시지를 부각시킵니다.', image: null, titleSize: 75, contentSize: 40, titleAlign: 'left', contentAlign: 'left' },
-  { layout: 'image_bottom', title: '마무리 슬라이드', content: '감사합니다!\n더 궁금한 점은 문의해주세요.', image: null, titleSize: 65, contentSize: 40, titleAlign: 'left', contentAlign: 'left' },
+const GRADS = [
+  'linear-gradient(135deg,#667eea,#764ba2)',
+  'linear-gradient(135deg,#f093fb,#f5576c)',
+  'linear-gradient(135deg,#4facfe,#00f2fe)',
+  'linear-gradient(135deg,#43e97b,#38f9d7)',
+  'linear-gradient(135deg,#fa709a,#fee140)',
+  'linear-gradient(135deg,#a18cd1,#fbc2eb)',
+  'linear-gradient(135deg,#fda085,#f6d365)',
 ];
 
-// 커스텀 토스트 알림 함수 (alert 대체)
-function showMessage(msg, isSuccess = false) {
-  const toast = document.getElementById('toast');
-  toast.textContent = msg;
-  toast.className = isSuccess ? 'show success' : 'show';
-  setTimeout(() => { toast.classList.remove('show', 'success'); }, 3000);
+const TONE_MAP = {
+  informative: '정보 전달 위주, 유익하고 명확한 문체, 숫자와 팁 강조',
+  casual: '친근하고 편안한 말투, 독자와 대화하듯, 이모지 적극 활용',
+  professional: '전문적이고 신뢰감 있는 비즈니스 문체, 간결하고 핵심만',
+  exciting: '흥미롭고 강렬한 문체, 강한 훅으로 시작, 클릭 유도'
+};
+
+// ═══════════════════════ INIT ═══════════════════════
+window.onload = () => {
+  if (!S.gk) document.getElementById('apiWarn').style.display = 'block';
+  updateCountUI();
+};
+
+// ═══════════════════════ MODALS ═══════════════════════
+function openModal(id, initFn) {
+  document.getElementById(id).classList.remove('hide');
+  if (initFn) initFn();
+}
+function closeModal(id) {
+  document.getElementById(id).classList.add('hide');
 }
 
-// ===== 탭 전환 =====
-function switchTab(name) {
-  document.querySelectorAll('.tab').forEach((t, i) => {
-    const names = ['plan', 'design', 'edit'];
-    t.classList.toggle('active', names[i] === name);
-  });
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  document.getElementById('panel-' + name).classList.add('active');
-  if (name === 'edit') refreshEditPanel();
+function initApiModal() {
+  document.getElementById('gkInput').value = S.gk;
+  document.getElementById('pkInput').value = S.pk;
 }
 
-// ===== 기획 패널 =====
-function selectTone(el, tone) {
-  document.querySelectorAll('.tone-btn').forEach(b => b.classList.remove('selected'));
-  el.classList.add('selected');
-  selectedTone = tone;
+function saveKeys() {
+  const gk = document.getElementById('gkInput').value.trim();
+  const pk = document.getElementById('pkInput').value.trim();
+  if (gk) { S.gk = gk; localStorage.setItem('cai_gk', gk); }
+  if (pk) { S.pk = pk; localStorage.setItem('cai_pk', pk); }
+  document.getElementById('apiWarn').style.display = S.gk ? 'none' : 'block';
+  closeModal('apiModal');
+  toast('API 키 저장 완료 ✅', 'ok');
 }
 
-function handlePlanImage(input) {
-  const file = input.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    planImage = e.target.result;
-    const preview = document.getElementById('planImgPreview');
-    preview.innerHTML = `<img src="${planImage}" style="max-height:80px;border-radius:6px;object-fit:cover;" /><div class="upload-text">이미지 변경</div>`;
-    slides[0].image = planImage;
-    renderSlide(currentIdx);
-    renderThumbnails();
-  };
-  reader.readAsDataURL(file);
+// ═══════════════════════ TEMPLATE & COUNT ═══════════════════════
+function setTmpl(t) {
+  S.tmpl = t;
+  ['dark','clean','gradient'].forEach(n => document.getElementById('tc-'+n).classList.remove('on'));
+  document.getElementById('tc-'+t).classList.add('on');
+  if (S.slides.length) render();
 }
 
-// ===== 디자인 패널 =====
-function selectColor(el, color) {
-  document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('selected'));
-  el.classList.add('selected');
-  brandColor = color;
-  document.getElementById('customColorPicker').value = color;
-  renderSlide(currentIdx);
-  renderThumbnails();
+function setCount(n) {
+  S.count = n;
+  updateCountUI();
 }
-function applyCustomColor(color) {
-  document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('selected'));
-  brandColor = color;
-  renderSlide(currentIdx);
-  renderThumbnails();
-}
-function selectFont(el, font) {
-  document.querySelectorAll('.font-option').forEach(f => f.classList.remove('selected'));
-  el.classList.add('selected');
-  fontFamily = font;
-  renderSlide(currentIdx);
-  renderThumbnails();
-}
-function setSlideCount(el, count) {
-  document.querySelectorAll('#panel-design .tone-btn').forEach(b => b.classList.remove('selected'));
-  el.classList.add('selected');
-  slideCount = count;
-  while (slides.length < count) {
-    slides.push({ layout: 'image_top', title: '슬라이드 ' + (slides.length+1), content: '내용을 입력하세요.', image: null, titleSize: 62, contentSize: 40, titleAlign: 'left', contentAlign: 'left' });
-  }
-  if (slides.length > count) slides = slides.slice(0, count);
-  if (currentIdx >= slides.length) currentIdx = slides.length - 1;
-  renderThumbnails();
-  renderSlide(currentIdx);
-}
-
-// ===== 편집 패널 =====
-function refreshEditPanel() {
-  const s = slides[currentIdx];
-  document.getElementById('titleInput').value = s.title || '';
-  document.getElementById('contentInput').value = s.content || '';
-  document.getElementById('titleSizeSlider').value = s.titleSize || 70;
-  document.getElementById('titleSizeVal').textContent = s.titleSize || 70;
-  document.getElementById('contentSizeSlider').value = s.contentSize || 40;
-  document.getElementById('contentSizeVal').textContent = s.contentSize || 40;
-
-  document.querySelectorAll('.layout-btn').forEach(b => {
-    const layouts = ['cover', 'image_top', 'image_bottom', 'text_only'];
-    const i = [...document.querySelectorAll('.layout-btn')].indexOf(b);
-    b.classList.toggle('selected', layouts[i] === s.layout);
-  });
-
-  const alignMap = { left: 0, center: 1, right: 2 };
-  const tAligns = document.querySelectorAll('.align-btn');
-  tAligns.forEach((b, i) => { if (i < 3) b.classList.toggle('selected', i === (alignMap[s.titleAlign] ?? 0)); });
-
-  const cRow = document.getElementById('contentAlignRow').querySelectorAll('.align-btn');
-  cRow.forEach((b, i) => b.classList.toggle('selected', i === (alignMap[s.contentAlign] ?? 0)));
-
-  const preview = document.getElementById('slideImgPreview');
-  if (s.image) {
-    preview.innerHTML = `<img src="${s.image}" style="max-height:80px;width:100%;border-radius:6px;object-fit:cover;" /><div class="upload-text">이미지 변경</div>`;
-  } else {
-    preview.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5a6080" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg><div class="upload-text">사진 추가 (선택)</div>`;
-  }
-}
-
-function selectLayout(el, layout) {
-  document.querySelectorAll('.layout-btn').forEach(b => b.classList.remove('selected'));
-  el.classList.add('selected');
-  slides[currentIdx].layout = layout;
-  renderSlide(currentIdx);
-  renderThumbnails();
-}
-
-function handleSlideImage(input) {
-  const file = input.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    slides[currentIdx].image = e.target.result;
-    refreshEditPanel();
-    renderSlide(currentIdx);
-    renderThumbnails();
-  };
-  reader.readAsDataURL(file);
-}
-
-function updateCurrentSlide(field, value) {
-  slides[currentIdx][field] = value;
-  renderSlide(currentIdx);
-  renderThumbnails();
-}
-
-function updateTitleSize(val) {
-  document.getElementById('titleSizeVal').textContent = val;
-  slides[currentIdx].titleSize = parseInt(val);
-  renderSlide(currentIdx);
-  renderThumbnails();
-}
-
-function updateContentSize(val) {
-  document.getElementById('contentSizeVal').textContent = val;
-  slides[currentIdx].contentSize = parseInt(val);
-  renderSlide(currentIdx);
-  renderThumbnails();
-}
-
-function setAlign(field, val, el, rowId) {
-  const row = rowId ? document.getElementById(rowId) : el.closest('.align-row');
-  row.querySelectorAll('.align-btn').forEach(b => b.classList.remove('selected'));
-  el.classList.add('selected');
-  slides[currentIdx][field] = val;
-  renderSlide(currentIdx);
-  renderThumbnails();
-}
-
-// ===== 캔버스 렌더링 =====
-function loadImg(src) {
-  return new Promise(resolve => {
-    if (!src) { resolve(null); return; }
-    const img = new Image();
-    img.crossOrigin = 'Anonymous';
-    img.onload = () => resolve(img);
-    img.onerror = () => resolve(null);
-    img.src = src;
+function updateCountUI() {
+  document.querySelectorAll('.cnt').forEach(b => {
+    b.classList.toggle('on', b.textContent.includes(S.count));
   });
 }
 
-function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
-  const lines = String(text || '').split('\n');
-  let curY = y;
-  lines.forEach(line => {
-    const words = line.split(' ');
-    let cur = '';
-    words.forEach((word, n) => {
-      const test = cur + word + ' ';
-      if (ctx.measureText(test).width > maxWidth && n > 0) {
-        ctx.fillText(cur.trim(), x, curY);
-        cur = word + ' ';
-        curY += lineHeight;
-      } else { cur = test; }
-    });
-    ctx.fillText(cur.trim(), x, curY);
-    curY += lineHeight;
-  });
-  return curY;
-}
-
-function drawRoundRect(ctx, x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x+r, y); ctx.lineTo(x+w-r, y);
-  ctx.quadraticCurveTo(x+w, y, x+w, y+r);
-  ctx.lineTo(x+w, y+h-r);
-  ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
-  ctx.lineTo(x+r, y+h);
-  ctx.quadraticCurveTo(x, y+h, x, y+h-r);
-  ctx.lineTo(x, y+r);
-  ctx.quadraticCurveTo(x, y, x+r, y);
-  ctx.closePath();
-  ctx.fill();
-}
-
-async function renderToCanvas(canvas, slide, idx, total) {
-  const ctx = canvas.getContext('2d');
-  const W = 1080, H = 1080;
-  canvas.width = W; canvas.height = H;
-
-  const layout = slide.layout || 'image_top';
-  const tSize = slide.titleSize || 70;
-  const cSize = slide.contentSize || 40;
-  const tAlign = slide.titleAlign || 'left';
-  const cAlign = slide.contentAlign || 'left';
-  const font = fontFamily;
-  const color = brandColor;
-
-  const img = await loadImg(slide.image);
-
-  const getX = (align, margin=100, maxW=880) => {
-    if (align === 'center') return W/2;
-    if (align === 'right') return W - margin;
-    return margin;
-  };
-
-  ctx.fillStyle = '#fff';
-  ctx.fillRect(0, 0, W, H);
-
-  if (layout === 'cover') {
-    if (img) {
-      const sc = Math.max(W/img.width, H/img.height);
-      ctx.drawImage(img, (W-img.width*sc)/2, (H-img.height*sc)/2, img.width*sc, img.height*sc);
-    } else {
-      ctx.fillStyle = color;
-      ctx.fillRect(0, 0, W, H);
-    }
-    ctx.fillStyle = 'rgba(0,0,0,0.52)';
-    ctx.fillRect(0, 0, W, H);
-
-    ctx.fillStyle = color;
-    drawRoundRect(ctx, W/2-55, 90, 110, 48, 24);
-    ctx.font = `bold 22px ${font}`;
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#fff';
-    ctx.fillText(`${idx+1} / ${total}`, W/2, 122);
-
-    ctx.font = `900 ${tSize}px ${font}`;
-    ctx.textAlign = tAlign;
-    ctx.fillStyle = '#fff';
-    const tNextY = wrapText(ctx, slide.title, getX(tAlign), 320, 880, tSize*1.3);
-
-    if (tAlign === 'center') {
-      ctx.fillStyle = color;
-      drawRoundRect(ctx, W/2-60, tNextY+20, 120, 5, 2.5);
-    }
-
-    ctx.font = `${cSize}px ${font}`;
-    ctx.textAlign = cAlign;
-    ctx.fillStyle = '#dde4ff';
-    wrapText(ctx, slide.content, getX(cAlign), tNextY + 70, 860, cSize*1.5);
-  }
-  else if (layout === 'image_top') {
-    ctx.fillStyle = '#e2e8f0';
-    ctx.fillRect(0, 0, W, 520);
-    if (img) {
-      const sc = Math.max(W/img.width, 520/img.height);
-      ctx.save(); ctx.beginPath(); ctx.rect(0,0,W,520); ctx.clip();
-      ctx.drawImage(img, (W-img.width*sc)/2, (520-img.height*sc)/2, img.width*sc, img.height*sc);
-      ctx.restore();
-    }
-    ctx.fillStyle = color;
-    drawRoundRect(ctx, W-150, 470, 110, 40, 20);
-    ctx.font = `bold 18px ${font}`;
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#fff';
-    ctx.fillText(`${idx+1} / ${total}`, W-95, 496);
-
-    ctx.fillStyle = color;
-    ctx.fillRect(100, 560, 80, 6);
-
-    ctx.font = `900 ${tSize}px ${font}`;
-    ctx.textAlign = tAlign;
-    ctx.fillStyle = '#0f172a';
-    const tNextY = wrapText(ctx, slide.title, getX(tAlign), 630, 880, tSize*1.3);
-
-    ctx.font = `${cSize}px ${font}`;
-    ctx.textAlign = cAlign;
-    ctx.fillStyle = '#475569';
-    wrapText(ctx, slide.content, getX(cAlign), tNextY+30, 880, cSize*1.5);
-  }
-  else if (layout === 'image_bottom') {
-    ctx.fillStyle = '#e2e8f0';
-    ctx.fillRect(0, 560, W, 520);
-    if (img) {
-      const sc = Math.max(W/img.width, 520/img.height);
-      ctx.save(); ctx.beginPath(); ctx.rect(0,560,W,520); ctx.clip();
-      ctx.drawImage(img, (W-img.width*sc)/2, 560+(520-img.height*sc)/2, img.width*sc, img.height*sc);
-      ctx.restore();
-    }
-    ctx.fillStyle = color;
-    drawRoundRect(ctx, W-150, 88, 110, 40, 20);
-    ctx.font = `bold 18px ${font}`;
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#fff';
-    ctx.fillText(`${idx+1} / ${total}`, W-95, 114);
-
-    ctx.fillStyle = color;
-    ctx.fillRect(100, 150, 80, 6);
-
-    ctx.font = `900 ${tSize}px ${font}`;
-    ctx.textAlign = tAlign;
-    ctx.fillStyle = '#0f172a';
-    const tNextY = wrapText(ctx, slide.title, getX(tAlign), 220, 880, tSize*1.3);
-
-    ctx.font = `${cSize}px ${font}`;
-    ctx.textAlign = cAlign;
-    ctx.fillStyle = '#475569';
-    wrapText(ctx, slide.content, getX(cAlign), tNextY+30, 880, cSize*1.5);
-  }
-  else if (layout === 'text_only') {
-    ctx.fillStyle = color;
-    ctx.fillRect(0, 0, W, H);
-
-    ctx.fillStyle = '#fff';
-    drawRoundRect(ctx, 60, 60, W-120, H-120, 48);
-
-    ctx.fillStyle = color;
-    ctx.font = `bold 18px ${font}`;
-    ctx.textAlign = 'center';
-    ctx.fillText(`${idx+1} / ${total}`, W/2, H-80);
-
-    ctx.font = `bold 180px ${font}`;
-    ctx.textAlign = 'left';
-    ctx.fillStyle = color;
-    ctx.globalAlpha = .12;
-    ctx.fillText('"', 110, 260);
-    ctx.globalAlpha = 1;
-
-    ctx.fillStyle = color;
-    ctx.fillRect(120, 290, 70, 7);
-
-    ctx.font = `900 ${tSize}px ${font}`;
-    ctx.textAlign = tAlign;
-    ctx.fillStyle = '#0f172a';
-    const tNextY = wrapText(ctx, slide.title, getX(tAlign, 120, 840), 380, 840, tSize*1.3);
-
-    ctx.font = `${cSize}px ${font}`;
-    ctx.textAlign = cAlign;
-    ctx.fillStyle = '#475569';
-    wrapText(ctx, slide.content, getX(cAlign, 120, 840), tNextY+36, 840, cSize*1.5);
-  }
-}
-
-async function renderSlide(idx) {
-  const canvas = document.getElementById('mainCanvas');
-  await renderToCanvas(canvas, slides[idx], idx, slides.length);
-}
-
-async function renderThumbnails() {
-  const container = document.getElementById('thumbnails');
-  container.innerHTML = '';
-  for (let i = 0; i < slides.length; i++) {
-    const thumb = document.createElement('div');
-    thumb.className = 'thumb' + (i === currentIdx ? ' active' : '');
-    thumb.onclick = (() => {
-      const idx = i;
-      return () => { currentIdx = idx; selectSlide(idx); };
-    })();
-
-    const c = document.createElement('canvas');
-    c.width = 1080; c.height = 1080;
-    await renderToCanvas(c, slides[i], i, slides.length);
-
-    const num = document.createElement('div');
-    num.className = 'thumb-num';
-    num.textContent = i + 1;
-
-    thumb.appendChild(c);
-    thumb.appendChild(num);
-    container.appendChild(thumb);
-  }
-}
-
-function selectSlide(idx) {
-  currentIdx = idx;
-  document.querySelectorAll('.thumb').forEach((t, i) => t.classList.toggle('active', i === idx));
-  renderSlide(idx);
-  refreshEditPanel();
-  switchTab('edit');
-}
-
-// ===== AI 생성 (Vercel 서버 연동) =====
-async function generateSlides() {
+// ═══════════════════════ GENERATE ═══════════════════════
+async function generate() {
   const topic = document.getElementById('topicInput').value.trim();
-  if (!topic) { showMessage('카드뉴스 주제를 입력해주세요!'); return; }
+  if (!topic) { toast('주제를 입력해주세요!', 'err'); return; }
+  if (!S.gk) { toast('Gemini API 키를 먼저 입력해주세요!', 'err'); openModal('apiModal', initApiModal); return; }
 
-  setLoading(true, 'AI가 기획 중...');
-  document.getElementById('generateBtn').disabled = true;
+  ld(true, 'AI가 콘텐츠를 생성 중...');
+
+  const tone = document.getElementById('toneSelect').value;
+  const prompt = `당신은 한국 인스타그램 카드뉴스 전문 크리에이터입니다.
+주제: "${topic}"
+톤: ${TONE_MAP[tone]}
+슬라이드 수: ${S.count}장
+
+규칙:
+- 첫 번째 슬라이드: type = "cover" (커버, 강렬한 제목)
+- 마지막 슬라이드: type = "cta" (팔로우/저장 유도 + 해시태그)
+- 나머지: type = "content" (본문 내용)
+- imageKeyword는 Pexels에서 검색할 영어 단어 2-3개
+
+반드시 아래 JSON 형식으로만 응답. 마크다운 없이 순수 JSON:
+{
+  "slides": [
+    {
+      "type": "cover",
+      "title": "제목 (20자 이내)",
+      "subtitle": "부제목 (30자 이내)",
+      "body": "",
+      "hashtags": "",
+      "imageKeyword": "english keywords"
+    },
+    {
+      "type": "content",
+      "title": "소제목 (20자 이내)",
+      "subtitle": "",
+      "body": "핵심 내용 (60자 이내)",
+      "hashtags": "",
+      "imageKeyword": "english keywords"
+    },
+    {
+      "type": "cta",
+      "title": "마무리 (15자 이내)",
+      "subtitle": "",
+      "body": "팔로우/저장 유도 (40자 이내)",
+      "hashtags": "#해시태그1 #해시태그2 #해시태그3 #해시태그4 #해시태그5",
+      "imageKeyword": "english keywords"
+    }
+  ]
+}`;
 
   try {
-    const layouts = ['cover', 'image_top', 'text_only', 'image_bottom', 'image_top', 'text_only'];
-    const layoutSlice = layouts.slice(0, slideCount);
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${S.gk}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.75, maxOutputTokens: 2048 }
+        })
+      }
+    );
 
-    // 구글로 직접 보내지 않고, 내가 만든 Vercel 서버(/api/generate)로 요청만 보냅니다.
-    const response = await fetch('/api/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        topic: topic,
-        tone: selectedTone,
-        slideCount: slideCount
-      })
-    });
-
-    if (!response.ok) {
-      const errData = await response.json().catch(() => ({}));
-      throw new Error(errData.error || `서버 오류: ${response.status}`);
+    if (!res.ok) {
+      const e = await res.json();
+      throw new Error(e.error?.message || `HTTP ${res.status}`);
     }
 
-    const parsed = await response.json();
-    
-    if (!parsed.slides || !Array.isArray(parsed.slides)) throw new Error('슬라이드 데이터 구조가 잘못되었습니다.');
+    const data = await res.json();
+    let raw = data.candidates[0].content.parts[0].text;
+    raw = raw.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
+    const parsed = JSON.parse(raw);
 
-    // 슬라이드 업데이트
-    slides = parsed.slides.map((s, i) => ({
-      layout: s.layout || layoutSlice[i] || 'image_top',
-      title: s.title || '',
-      content: s.content || '',
-      image: i === 0 ? planImage : null,
-      titleSize: s.layout === 'cover' ? 80 : s.layout === 'text_only' ? 75 : 62,
-      contentSize: 40,
-      titleAlign: s.layout === 'cover' ? 'center' : 'left',
-      contentAlign: s.layout === 'cover' ? 'center' : 'left',
+    S.slides = parsed.slides.map((s, i) => ({
+      ...s,
+      imageUrl: '',
+      grad: GRADS[i % GRADS.length]
     }));
 
-    currentIdx = 0;
-    await renderSlide(0);
-    await renderThumbnails();
-    switchTab('edit');
-    refreshEditPanel();
-    showMessage('AI 카드뉴스 기획이 완료되었습니다!', true);
+    // Fetch images
+    if (S.pk) {
+      ld(true, 'Pexels에서 이미지 검색 중...');
+      await Promise.all(S.slides.map(async (sl) => {
+        if (sl.imageKeyword) sl.imageUrl = await pexelsFetch(sl.imageKeyword);
+      }));
+    }
 
+    render();
+    toast('생성 완료! 텍스트 클릭으로 편집 가능해요 ✅', 'ok');
   } catch (e) {
-    showMessage('오류: ' + e.message);
+    console.error(e);
+    toast('오류: ' + e.message, 'err');
   } finally {
-    setLoading(false);
-    document.getElementById('generateBtn').disabled = false;
+    ld(false);
   }
 }
 
-// ===== 로딩 =====
-function setLoading(show, msg='처리 중...') {
-  const overlay = document.getElementById('loadingOverlay');
-  document.getElementById('loadingMsg').textContent = msg;
-  overlay.classList.toggle('show', show);
+// ═══════════════════════ PEXELS ═══════════════════════
+async function pexelsFetch(kw) {
+  if (!S.pk) return '';
+  try {
+    const r = await fetch(
+      `https://api.pexels.com/v1/search?query=${encodeURIComponent(kw)}&per_page=5&orientation=portrait`,
+      { headers: { Authorization: S.pk } }
+    );
+    const d = await r.json();
+    return d.photos?.[0]?.src?.large || '';
+  } catch { return ''; }
 }
 
-// ===== 다운로드 =====
-function downloadCurrent() {
-  const canvas = document.getElementById('mainCanvas');
-  const link = document.createElement('a');
-  link.download = `카드뉴스_${currentIdx+1}.png`;
-  link.href = canvas.toDataURL('image/png');
-  link.click();
+// ═══════════════════════ IMAGE MODAL ═══════════════════════
+function openImgModal(i) {
+  S.targetSlide = i;
+  document.getElementById('imgQ').value = S.slides[i]?.imageKeyword || '';
+  document.getElementById('imgGrid').innerHTML = '<div class="ig-empty">검색하면 무료 이미지가 표시됩니다 🔍</div>';
+  openModal('imgModal');
+  if (S.slides[i]?.imageKeyword) searchImg();
+}
+
+async function searchImg() {
+  const q = document.getElementById('imgQ').value.trim();
+  if (!q) return;
+  if (!S.pk) {
+    document.getElementById('imgGrid').innerHTML = '<div class="ig-empty">Pexels API 키가 필요해요. 상단 🔑 API 설정에서 입력해주세요.</div>';
+    return;
+  }
+  document.getElementById('imgGrid').innerHTML = '<div class="ig-empty">이미지 검색 중...</div>';
+  try {
+    const r = await fetch(
+      `https://api.pexels.com/v1/search?query=${encodeURIComponent(q)}&per_page=9&orientation=portrait`,
+      { headers: { Authorization: S.pk } }
+    );
+    const d = await r.json();
+    if (!d.photos?.length) {
+      document.getElementById('imgGrid').innerHTML = '<div class="ig-empty">결과 없음. 다른 키워드를 시도해보세요.</div>';
+      return;
+    }
+    document.getElementById('imgGrid').innerHTML = d.photos.map(p =>
+      `<img class="img-thumb" src="${p.src.medium}" onclick="pickImg('${p.src.large}')" alt="${p.alt||''}">`
+    ).join('');
+  } catch {
+    document.getElementById('imgGrid').innerHTML = '<div class="ig-empty">검색 실패. API 키를 확인해주세요.</div>';
+  }
+}
+
+function pickImg(url) {
+  if (S.targetSlide !== null) { S.slides[S.targetSlide].imageUrl = url; render(); }
+  closeModal('imgModal');
+}
+
+function uploadImg(e) {
+  const file = e.target.files[0];
+  if (!file || S.targetSlide === null) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    S.slides[S.targetSlide].imageUrl = ev.target.result;
+    render();
+    closeModal('imgModal');
+  };
+  reader.readAsDataURL(file);
+}
+
+// ═══════════════════════ RENDER ═══════════════════════
+function render() {
+  const wrap = document.getElementById('slidesWrap');
+  const toolbar = document.getElementById('cToolbar');
+  document.getElementById('dlAllBtn').style.display = 'block';
+  toolbar.classList.add('show');
+
+  wrap.innerHTML = S.slides.map((sl, i) => `
+    <div class="sw">
+      <div class="sw-num">슬라이드 ${i+1}</div>
+      <div class="slide-card" id="sc${i}">${buildSlide(sl, i)}</div>
+      <div class="sw-actions">
+        <button class="btn btn-ghost btn-sm" onclick="openImgModal(${i})">🖼️ 이미지</button>
+        <button class="btn btn-ghost btn-sm" onclick="dlSlide(${i})">⬇️ PNG</button>
+      </div>
+    </div>`).join('');
+
+  // bind contenteditable
+  wrap.querySelectorAll('[data-f]').forEach(el => {
+    el.addEventListener('input', function() {
+      S.slides[+this.dataset.i][this.dataset.f] = this.innerText;
+    });
+    el.addEventListener('keydown', e => { if (e.key === 'Enter') e.preventDefault(); });
+  });
+}
+
+function buildSlide(sl, i) {
+  const total = S.slides.length;
+  const hasBg = !!sl.imageUrl;
+  const bgStyle = hasBg
+    ? `background-image:url('${sl.imageUrl}');background-size:cover;background-position:center;`
+    : `background:${sl.grad};`;
+
+  const edt = (field, style='') => sl[field]
+    ? `<div contenteditable="true" data-f="${field}" data-i="${i}" style="${style}">${sl[field]}</div>`
+    : '';
+
+  if (S.tmpl === 'dark') {
+    return `
+      <div style="width:100%;height:100%;position:relative;border-radius:12px;overflow:hidden;">
+        <div style="position:absolute;inset:0;${bgStyle}"></div>
+        <div style="position:absolute;inset:0;background:${hasBg
+          ? 'linear-gradient(to top,rgba(0,0,0,.88) 0%,rgba(0,0,0,.2) 60%,rgba(0,0,0,.05) 100%)'
+          : 'linear-gradient(to top,rgba(0,0,0,.6) 0%,rgba(0,0,0,.1) 100%)'}"></div>
+        <div style="position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;padding:18px;">
+          <div style="display:inline-block;background:#CCFF00;color:#000;font-size:8px;font-weight:900;letter-spacing:1.5px;text-transform:uppercase;padding:2px 7px;border-radius:4px;margin-bottom:7px;width:fit-content;">
+            ${sl.type==='cover'?'COVER':sl.type==='cta'?'CTA':String(i+1).padStart(2,'0')}
+          </div>
+          ${edt('title','font-size:17px;font-weight:900;color:#fff;line-height:1.3;margin-bottom:6px;word-break:keep-all;')}
+          ${edt('subtitle','font-size:11px;color:rgba(255,255,255,.7);margin-bottom:4px;word-break:keep-all;')}
+          ${edt('body','font-size:11px;color:rgba(255,255,255,.85);line-height:1.6;word-break:keep-all;')}
+          ${edt('hashtags','font-size:9px;color:#CCFF00;margin-top:7px;word-break:break-all;')}
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;opacity:.45;font-size:9px;color:#fff;">
+            <span>${sl.type==='cover'?'SWIPE →':''}</span>
+            <span>${i+1} / ${total}</span>
+          </div>
+        </div>
+      </div>`;
+
+  } else if (S.tmpl === 'clean') {
+    return `
+      <div style="width:100%;height:100%;position:relative;background:#f6f6f6;border-radius:12px;overflow:hidden;">
+        <div style="position:absolute;top:0;left:0;right:0;height:55%;${bgStyle}${!hasBg?'opacity:.8':''}"></div>
+        <div style="position:absolute;top:10px;right:10px;background:rgba(0,0,0,.55);color:#fff;font-size:8px;font-weight:700;padding:2px 7px;border-radius:99px;">${i+1}/${total}</div>
+        <div style="position:absolute;bottom:0;left:0;right:0;height:50%;background:#fff;padding:14px 14px 10px;display:flex;flex-direction:column;justify-content:center;">
+          <div style="width:22px;height:3px;background:#CCFF00;margin-bottom:8px;border-radius:2px;"></div>
+          ${edt('title','font-size:14px;font-weight:900;color:#111;line-height:1.3;margin-bottom:5px;word-break:keep-all;')}
+          ${edt('subtitle','font-size:10px;color:#777;margin-bottom:4px;')}
+          ${edt('body','font-size:10px;color:#555;line-height:1.6;word-break:keep-all;')}
+          ${edt('hashtags','font-size:8.5px;color:#999;margin-top:6px;word-break:break-all;')}
+        </div>
+      </div>`;
+
+  } else { // gradient
+    const overlayStyle = hasBg ? 'background:linear-gradient(to top,rgba(0,0,0,.75) 0%,rgba(0,0,0,.1) 100%);' : '';
+    return `
+      <div style="width:100%;height:100%;position:relative;border-radius:12px;overflow:hidden;">
+        <div style="position:absolute;inset:0;${bgStyle}"></div>
+        ${hasBg ? `<div style="position:absolute;inset:0;${overlayStyle}"></div>` : ''}
+        <div style="position:absolute;top:12px;right:12px;width:24px;height:24px;background:rgba(255,255,255,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:rgba(255,255,255,.9);">${i+1}</div>
+        <div style="position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;padding:20px;">
+          ${sl.type==='cover'?`<div style="font-size:8px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.65);margin-bottom:8px;">CARD NEWS</div>`:''}
+          ${edt('title',`font-size:${sl.type==='cover'?'19':'16'}px;font-weight:900;color:#fff;line-height:1.3;margin-bottom:8px;word-break:keep-all;`)}
+          ${edt('subtitle','font-size:11px;color:rgba(255,255,255,.8);margin-bottom:5px;')}
+          ${edt('body','font-size:10.5px;color:rgba(255,255,255,.85);line-height:1.6;word-break:keep-all;')}
+          ${edt('hashtags','font-size:9px;color:rgba(255,255,255,.6);margin-top:8px;word-break:break-all;')}
+        </div>
+      </div>`;
+  }
+}
+
+// ═══════════════════════ DOWNLOAD ═══════════════════════
+
+// Pexels 이미지를 Data URL로 변환 (CORS 우회)
+async function toDataUrl(url) {
+  if (!url || url.startsWith('data:') || url.startsWith('blob:')) return url;
+  try {
+    const r = await fetch(url);
+    const blob = await r.blob();
+    return new Promise(res => {
+      const reader = new FileReader();
+      reader.onloadend = () => res(reader.result);
+      reader.readAsDataURL(blob);
+    });
+  } catch { return url; }
+}
+
+async function captureSlide(i) {
+  const card = document.getElementById('sc' + i);
+
+  // 외부 이미지를 data URL로 교체
+  const sl = S.slides[i];
+  let origUrl = '';
+  let bgEl = null;
+
+  if (sl.imageUrl && !sl.imageUrl.startsWith('data:')) {
+    bgEl = card.querySelector('[style*="url("]');
+    if (bgEl) {
+      origUrl = sl.imageUrl;
+      const dataUrl = await toDataUrl(origUrl);
+      bgEl.style.backgroundImage = `url('${dataUrl}')`;
+    }
+  }
+
+  const canvas = await html2canvas(card, {
+    scale: 4, // 252*4 = 1008 ≈ 1080px
+    useCORS: true,
+    allowTaint: true,
+    backgroundColor: null,
+    logging: false
+  });
+
+  // 원복
+  if (bgEl && origUrl) bgEl.style.backgroundImage = `url('${origUrl}')`;
+
+  return canvas;
+}
+
+async function dlSlide(i) {
+  ld(true, `슬라이드 ${i+1} PNG 저장 중...`);
+  try {
+    const canvas = await captureSlide(i);
+    const a = document.createElement('a');
+    a.download = `cardai_${i+1}.png`;
+    a.href = canvas.toDataURL('image/png');
+    a.click();
+    toast(`슬라이드 ${i+1} 저장 완료!`, 'ok');
+  } catch (e) {
+    toast('저장 실패: ' + e.message, 'err');
+  } finally { ld(false); }
 }
 
 async function downloadAll() {
-  setLoading(true, '전체 이미지 준비 중...');
-  const offscreen = document.createElement('canvas');
-  offscreen.width = 1080; offscreen.height = 1080;
-  for (let i = 0; i < slides.length; i++) {
-    setLoading(true, `${i+1} / ${slides.length} 저장 중...`);
-    await renderToCanvas(offscreen, slides[i], i, slides.length);
-    const link = document.createElement('a');
-    link.download = `카드뉴스_${i+1}.png`;
-    link.href = offscreen.toDataURL('image/png');
-    link.click();
-    await new Promise(r => setTimeout(r, 400));
+  for (let i = 0; i < S.slides.length; i++) {
+    ld(true, `슬라이드 ${i+1}/${S.slides.length} 저장 중...`);
+    try {
+      const canvas = await captureSlide(i);
+      const a = document.createElement('a');
+      a.download = `cardai_${i+1}.png`;
+      a.href = canvas.toDataURL('image/png');
+      a.click();
+      await new Promise(r => setTimeout(r, 700));
+    } catch (e) { console.error(e); }
   }
-  setLoading(false);
-  showMessage('전체 저장이 완료되었습니다.', true);
+  ld(false);
+  toast('전체 다운로드 완료! ✅', 'ok');
 }
 
-// ===== 초기화 =====
-async function init() {
-  // 웹 폰트가 완전히 로딩된 후 렌더링 (글자 깨짐 방지)
-  await document.fonts.ready;
-  slideCount = 4;
-  await renderSlide(0);
-  await renderThumbnails();
+// ═══════════════════════ UTILS ═══════════════════════
+function ld(show, text) {
+  const el = document.getElementById('ldOverlay');
+  if (show) {
+    document.getElementById('ldText').textContent = text || '처리 중...';
+    el.classList.remove('hide');
+  } else {
+    el.classList.add('hide');
+  }
 }
 
-init();
+let _tt;
+function toast(msg, type='') {
+  document.querySelector('.toast')?.remove();
+  clearTimeout(_tt);
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  document.body.appendChild(el);
+  _tt = setTimeout(() => el.remove(), 3000);
+}
 </script>
 </body>
 </html>
