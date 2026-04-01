@@ -159,10 +159,10 @@
       입력하면 브라우저에 저장되어 다음에 자동으로 불러와요.
     </p>
     <div class="field" style="margin-bottom:14px;">
-      <label>Gemini API 키 (AI 글 생성) — 무료</label>
-      <input type="password" id="gkInput" placeholder="AIza...">
+      <label>Groq API 키 (AI 글 생성) — 무료, 한국 OK</label>
+      <input type="password" id="gkInput" placeholder="gsk_...">
       <small style="font-size:11px;color:var(--muted);margin-top:3px;">
-        👉 <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--accent);">aistudio.google.com</a> 에서 무료 발급
+        👉 <a href="https://console.groq.com/keys" target="_blank" style="color:var(--accent);">console.groq.com/keys</a> 에서 무료 발급
       </small>
     </div>
     <div class="field">
@@ -278,9 +278,9 @@
 
     <!-- 경고 -->
     <div class="warn" id="apiWarn" style="display:none">
-      ⚠️ Gemini API 키가 없으면 생성이 안 돼요.<br>
+      ⚠️ Groq API 키가 없으면 생성이 안 돼요.<br>
       상단 <strong>🔑 API 설정</strong>에서 입력해주세요.<br>
-      <a href="https://aistudio.google.com/app/apikey" target="_blank">무료 발급 바로가기 →</a>
+      <a href="https://console.groq.com/keys" target="_blank">무료 발급 바로가기 →</a>
     </div>
 
     <button class="btn btn-accent btn-full" onclick="generate()" id="genBtn">✨ 카드뉴스 생성</button>
@@ -429,13 +429,15 @@ async function generate() {
 
   try {
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${S.gk}`,
+      `https://api.groq.com/openai/v1/chat/completions`,
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${S.gk}` },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.75, maxOutputTokens: 2048 }
+          model: 'llama-3.3-70b-versatile',
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.75,
+          max_tokens: 2048
         })
       }
     );
@@ -446,7 +448,7 @@ async function generate() {
     }
 
     const data = await res.json();
-    let raw = data.candidates[0].content.parts[0].text;
+    let raw = data.choices[0].message.content;
     raw = raw.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
     const parsed = JSON.parse(raw);
 
