@@ -441,6 +441,10 @@ function makeSlide(s, i) {
     showSwipe:    s.type === 'cover',
     showPageNum:  true,
 
+    // 이미지 위치/크기
+    imgPosX: 50, imgPosY: 50,  // background-position (%)
+    imgScale: 'cover',          // cover | contain | 숫자%
+
     // 요소 위치 (%, 0=상단 100=하단)
     badgePos:    {x:5, y:49},
     titlePos:    {x:5, y:55},
@@ -591,6 +595,7 @@ function uploadImg(e) {
 
 // ════════════════════════════════ SELECT & PANEL ════════════════════════════════
 function selectSlide(i) {
+  // 같은 슬라이드 다시 클릭해도 항상 패널 열림
   S.selected = i;
   document.querySelectorAll('.sw').forEach((el,idx) => el.classList.toggle('selected', idx === i));
   $('mainGrid').classList.add('panel-open');
@@ -605,6 +610,7 @@ function closePanel() {
   document.querySelectorAll('.sw').forEach(el => el.classList.remove('selected'));
   $('mainGrid').classList.remove('panel-open');
   $('rsb').classList.remove('mob-open');
+  $('ctb').classList.remove('show');
 }
 
 function setTab(t) {
@@ -662,10 +668,32 @@ function renderPanel() {
   else if (S.editTab === 'bg') {
     $('rpBody').innerHTML = `
       <div class="ep-sec">이미지</div>
-      <div style="display:flex;gap:6px;margin-bottom:12px;">
+      <div style="display:flex;gap:6px;margin-bottom:10px;">
         <button class="btn btn-g btn-sm" style="flex:1;" onclick="openImgModal(${i})">🔍 이미지 검색/업로드</button>
         ${sl.imageUrl ? `<button class="btn btn-danger btn-sm" onclick="removeImg()">제거</button>` : ''}
       </div>
+      ${sl.imageUrl ? `
+      <div class="ep-sec">이미지 위치 & 크기</div>
+      <div class="ep-row"><label>좌우</label>
+        <input type="range" min="0" max="100" value="${sl.imgPosX}" oninput="updateProp('imgPosX',+this.value);$('epv_imgPosX').textContent=this.value+'%'">
+        <span class="ep-val" id="epv_imgPosX">${sl.imgPosX}%</span>
+      </div>
+      <div class="ep-row"><label>상하</label>
+        <input type="range" min="0" max="100" value="${sl.imgPosY}" oninput="updateProp('imgPosY',+this.value);$('epv_imgPosY').textContent=this.value+'%'">
+        <span class="ep-val" id="epv_imgPosY">${sl.imgPosY}%</span>
+      </div>
+      <div class="ep-sec">이미지 크기</div>
+      <div class="ep-btn-row" style="margin-bottom:8px;">
+        <button class="ep-btn ${sl.imgScale==='cover'?'on':''}" onclick="updateProp('imgScale','cover');renderPanel()">꽉채우기</button>
+        <button class="ep-btn ${sl.imgScale==='contain'?'on':''}" onclick="updateProp('imgScale','contain');renderPanel()">전체보기</button>
+        <button class="ep-btn ${sl.imgScale!=='cover'&&sl.imgScale!=='contain'?'on':''}" onclick="updateProp('imgScale',100);renderPanel()">직접조절</button>
+      </div>
+      ${sl.imgScale !== 'cover' && sl.imgScale !== 'contain' ? `
+      <div class="ep-row"><label>배율</label>
+        <input type="range" min="50" max="300" value="${sl.imgScale}" oninput="updateProp('imgScale',+this.value);$('epv_imgScale').textContent=this.value+'%'">
+        <span class="ep-val" id="epv_imgScale">${sl.imgScale}%</span>
+      </div>` : ''}
+      ` : `<div style="font-size:11px;color:var(--muted);margin-bottom:10px;">이미지를 먼저 추가해주세요.</div>`}
       <div class="ep-sec">오버레이</div>
       ${epRangeRow('overlayOpacity','어둡기',sl.overlayOpacity,0,1,0.05,2)}
       <div class="ep-sec">그라디언트 (배경 없을 때)</div>
@@ -828,8 +856,9 @@ function buildSlideInner(sl, i) {
   const p = Math.round;
   const total = S.slides.length;
   const hasBg = !!sl.imageUrl;
+  const bgSize = sl.imgScale === 'cover' ? 'cover' : sl.imgScale === 'contain' ? 'contain' : sl.imgScale+'%';
   const bgStyle = hasBg
-    ? `background-image:url('${sl.imageUrl}');background-size:cover;background-position:center;`
+    ? `background-image:url('${sl.imageUrl}');background-size:${bgSize};background-position:${sl.imgPosX}% ${sl.imgPosY}%;`
     : `background:${sl.grad};`;
 
   // 요소 빌더: 절대 위치 + 드래그 핸들 (빈 필드도 항상 렌더링)
@@ -1060,8 +1089,9 @@ function removeSlide(i) {
 function buildSlideHQ(sl, i) {
   const total = S.slides.length;
   const hasBg = !!sl.imageUrl;
+  const bgSizeHQ = sl.imgScale === 'cover' ? 'cover' : sl.imgScale === 'contain' ? 'contain' : sl.imgScale+'%';
   const bgStyle = hasBg
-    ? `background-image:url('${sl.imageUrl}');background-size:cover;background-position:center;`
+    ? `background-image:url('${sl.imageUrl}');background-size:${bgSizeHQ};background-position:${sl.imgPosX}% ${sl.imgPosY}%;`
     : `background:${sl.grad};`;
 
   // % → px (1080×1350 기준)
