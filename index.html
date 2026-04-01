@@ -188,8 +188,11 @@
       <button class="btn btn-accent btn-sm" onclick="searchImg()">검색</button>
     </div>
     <div class="upload-row">
-      <span>또는 직접 올리기:</span>
-      <input type="file" accept="image/*" onchange="uploadImg(event)">
+      <span>또는 직접 업로드:</span>
+      <label style="cursor:pointer;">
+        <input type="file" accept="image/*" onchange="uploadImg(event)" style="display:none;">
+        <span class="btn btn-ghost btn-sm" style="display:inline-block;">📁 내 사진 선택</span>
+      </label>
     </div>
     <div class="img-grid" id="imgGrid">
       <div class="ig-empty">검색하면 Pexels 무료 이미지가 표시됩니다 🔍</div>
@@ -454,6 +457,7 @@ async function generate() {
 
     S.slides = parsed.slides.map((s, i) => ({
       ...s,
+      badge: s.type === 'cover' ? 'COVER' : s.type === 'cta' ? 'CTA' : String(i+1).padStart(2,'0'),
       imageUrl: '',
       grad: GRADS[i % GRADS.length]
     }));
@@ -567,6 +571,25 @@ function render() {
   });
 }
 
+function buildBadge(sl, i, color='#000', bg='#CCFF00', fontSize='8px') {
+  if (sl.badge === '') return ''; // 삭제된 상태
+  return `<div style="display:flex;align-items:center;gap:4px;margin-bottom:7px;">
+    <div contenteditable="true" data-f="badge" data-i="${i}"
+      style="display:inline-block;background:${bg};color:${color};font-size:${fontSize};font-weight:900;
+      letter-spacing:1.5px;text-transform:uppercase;padding:2px 7px;border-radius:4px;
+      outline:none;min-width:10px;">${sl.badge}</div>
+    <div onclick="deleteBadge(${i})"
+      style="cursor:pointer;background:rgba(255,0,0,0.7);color:#fff;font-size:9px;font-weight:700;
+      border-radius:50%;width:14px;height:14px;display:flex;align-items:center;justify-content:center;
+      line-height:1;flex-shrink:0;" title="배지 삭제">×</div>
+  </div>`;
+}
+
+function deleteBadge(i) {
+  S.slides[i].badge = '';
+  render();
+}
+
 function buildSlide(sl, i) {
   const total = S.slides.length;
   const hasBg = !!sl.imageUrl;
@@ -586,9 +609,7 @@ function buildSlide(sl, i) {
           ? 'linear-gradient(to top,rgba(0,0,0,.88) 0%,rgba(0,0,0,.2) 60%,rgba(0,0,0,.05) 100%)'
           : 'linear-gradient(to top,rgba(0,0,0,.6) 0%,rgba(0,0,0,.1) 100%)'}"></div>
         <div style="position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;padding:18px;">
-          <div style="display:inline-block;background:#CCFF00;color:#000;font-size:8px;font-weight:900;letter-spacing:1.5px;text-transform:uppercase;padding:2px 7px;border-radius:4px;margin-bottom:7px;width:fit-content;">
-            ${sl.type==='cover'?'COVER':sl.type==='cta'?'CTA':String(i+1).padStart(2,'0')}
-          </div>
+          ${buildBadge(sl, i)}
           ${edt('title','font-size:17px;font-weight:900;color:#fff;line-height:1.3;margin-bottom:6px;word-break:keep-all;')}
           ${edt('subtitle','font-size:11px;color:rgba(255,255,255,.7);margin-bottom:4px;word-break:keep-all;')}
           ${edt('body','font-size:11px;color:rgba(255,255,255,.85);line-height:1.6;word-break:keep-all;')}
@@ -607,6 +628,7 @@ function buildSlide(sl, i) {
         <div style="position:absolute;top:10px;right:10px;background:rgba(0,0,0,.55);color:#fff;font-size:8px;font-weight:700;padding:2px 7px;border-radius:99px;">${i+1}/${total}</div>
         <div style="position:absolute;bottom:0;left:0;right:0;height:50%;background:#fff;padding:14px 14px 10px;display:flex;flex-direction:column;justify-content:center;">
           <div style="width:22px;height:3px;background:#CCFF00;margin-bottom:8px;border-radius:2px;"></div>
+          ${buildBadge(sl, i, '#333', 'rgba(204,255,0,0.15)', '8px')}
           ${edt('title','font-size:14px;font-weight:900;color:#111;line-height:1.3;margin-bottom:5px;word-break:keep-all;')}
           ${edt('subtitle','font-size:10px;color:#777;margin-bottom:4px;')}
           ${edt('body','font-size:10px;color:#555;line-height:1.6;word-break:keep-all;')}
@@ -622,7 +644,7 @@ function buildSlide(sl, i) {
         ${hasBg ? `<div style="position:absolute;inset:0;${overlayStyle}"></div>` : ''}
         <div style="position:absolute;top:12px;right:12px;width:24px;height:24px;background:rgba(255,255,255,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:rgba(255,255,255,.9);">${i+1}</div>
         <div style="position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;padding:20px;">
-          ${sl.type==='cover'?`<div style="font-size:8px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.65);margin-bottom:8px;">CARD NEWS</div>`:''}
+          ${buildBadge(sl, i, 'rgba(0,0,0,0.7)', 'rgba(255,255,255,0.9)', '8px')}
           ${edt('title',`font-size:${sl.type==='cover'?'19':'16'}px;font-weight:900;color:#fff;line-height:1.3;margin-bottom:8px;word-break:keep-all;`)}
           ${edt('subtitle','font-size:11px;color:rgba(255,255,255,.8);margin-bottom:5px;')}
           ${edt('body','font-size:10.5px;color:rgba(255,255,255,.85);line-height:1.6;word-break:keep-all;')}
