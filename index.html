@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <title>CardAI — 짓마케팅</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Black+Han+Sans&family=Do+Hyeon&family=Jua&family=Gaegu:wght@400;700&family=Gamja+Flower&family=Gothic+A1:wght@400;700;900&family=Nanum+Myeongjo:wght@400;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
       --bg:#0b0b0b; --surface:#141414; --s2:#1c1c1c; --s3:#222;
@@ -188,14 +188,55 @@
     .sb-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:49;}
 
     @media(max-width:700px){
-      .lsb{position:fixed;left:0;top:0;bottom:0;z-index:50;width:86vw;max-width:300px;transform:translateX(-100%);transition:transform .3s;padding-bottom:80px;}
+      /* 바디 높이를 dvh로 고정하되 내부는 스크롤 허용 */
+      body{overflow:hidden;}
+
+      .lsb{position:fixed;left:0;top:0;bottom:0;z-index:50;width:88vw;max-width:300px;transform:translateX(-100%);transition:transform .3s;padding-bottom:80px;}
       .lsb.mob-open{transform:translateX(0);}
       .sb-ov.mob-open{display:block;}
       .mob-btn{display:block;}
-      .main{grid-template-columns:0 1fr 0 !important;}
-      .rsb{position:fixed;right:0;top:0;bottom:0;z-index:48;width:84vw;max-width:280px;transform:translateX(100%);transition:transform .3s;}
-      .rsb.mob-open{transform:translateX(0);}
-      .slides-wrap{padding:12px;}
+
+      /* 메인 그리드: 사이드바 숨김, 캔버스 전체 */
+      .main{display:flex !important;flex-direction:column;}
+
+      /* 캔버스 영역이 남은 공간 전부 */
+      .canvas{flex:1;min-height:0;display:flex;flex-direction:column;}
+
+      /* 슬라이드 wrap: 세로 스크롤 + 가로도 허용 */
+      .slides-wrap{
+        flex:1;
+        overflow-x:hidden;
+        overflow-y:auto;
+        display:flex;
+        flex-direction:column;
+        align-items:center;
+        gap:20px;
+        padding:16px 20px 80px;
+        -webkit-overflow-scrolling:touch;
+      }
+
+      /* 슬라이드 너비를 화면에 맞게 */
+      .sw{width:100%;max-width:340px;align-items:center;}
+      .slide-card{
+        width:min(280px, 80vw) !important;
+        height:min(350px, 100vw) !important;
+      }
+
+      /* 우측 패널: 하단에서 올라오는 sheet */
+      .rsb{
+        position:fixed;bottom:0;left:0;right:0;top:auto;
+        z-index:48;width:100%;max-width:100%;height:70dvh;
+        transform:translateY(100%);
+        transition:transform .3s;
+        border-radius:16px 16px 0 0;
+        border-top:1px solid var(--border);
+        border-left:none;
+      }
+      .rsb.mob-open{transform:translateY(0);}
+
+      /* 툴바 모바일 */
+      .ctb{padding:6px 12px;}
+      .ctb-hint{font-size:9px;}
     }
   </style>
 </head>
@@ -441,6 +482,9 @@ function makeSlide(s, i) {
     showSwipe:    s.type === 'cover',
     showPageNum:  true,
 
+    // 폰트
+    fontFamily: 'Noto Sans KR',
+
     // 이미지 위치/크기
     imgPosX: 50, imgPosY: 50,  // background-position (%)
     imgScale: 'cover',          // cover | contain | 숫자%
@@ -642,6 +686,18 @@ function renderPanel() {
 
   else if (S.editTab === 'style') {
     $('rpBody').innerHTML = `
+      <div class="ep-sec">폰트</div>
+      <div class="ep-btn-row" style="flex-wrap:wrap;gap:5px;margin-bottom:12px;">
+      <button class="ep-btn ep-font-btn ${sl.fontFamily==='Noto Sans KR'?'on':''}" onclick="updateProp('fontFamily','Noto Sans KR')" style="font-family:'Noto Sans KR',sans-serif;font-size:11px;padding:6px 8px;flex:1 1 45%;">노토산스 — 기본</button>
+      <button class="ep-btn ep-font-btn ${sl.fontFamily==='Gothic A1'?'on':''}" onclick="updateProp('fontFamily','Gothic A1')" style="font-family:'Gothic A1',sans-serif;font-size:11px;padding:6px 8px;flex:1 1 45%;">고딕A1 — 깔끔한 고딕</button>
+      <button class="ep-btn ep-font-btn ${sl.fontFamily==='Black Han Sans'?'on':''}" onclick="updateProp('fontFamily','Black Han Sans')" style="font-family:'Black Han Sans',sans-serif;font-size:11px;padding:6px 8px;flex:1 1 45%;">블랙한산스 — 임팩트</button>
+      <button class="ep-btn ep-font-btn ${sl.fontFamily==='Do Hyeon'?'on':''}" onclick="updateProp('fontFamily','Do Hyeon')" style="font-family:'Do Hyeon',sans-serif;font-size:11px;padding:6px 8px;flex:1 1 45%;">도현 — 둥근 고딕</button>
+      <button class="ep-btn ep-font-btn ${sl.fontFamily==='Jua'?'on':''}" onclick="updateProp('fontFamily','Jua')" style="font-family:'Jua',sans-serif;font-size:11px;padding:6px 8px;flex:1 1 45%;">주아 — 귀여운 느낌</button>
+      <button class="ep-btn ep-font-btn ${sl.fontFamily==='Gaegu'?'on':''}" onclick="updateProp('fontFamily','Gaegu')" style="font-family:'Gaegu',sans-serif;font-size:11px;padding:6px 8px;flex:1 1 45%;">개구 — 손글씨 느낌</button>
+      <button class="ep-btn ep-font-btn ${sl.fontFamily==='Gamja Flower'?'on':''}" onclick="updateProp('fontFamily','Gamja Flower')" style="font-family:'Gamja Flower',sans-serif;font-size:11px;padding:6px 8px;flex:1 1 45%;">감자꽃 — 손글씨</button>
+      <button class="ep-btn ep-font-btn ${sl.fontFamily==='Nanum Myeongjo'?'on':''}" onclick="updateProp('fontFamily','Nanum Myeongjo')" style="font-family:'Nanum Myeongjo',sans-serif;font-size:11px;padding:6px 8px;flex:1 1 45%;">나눔명조 — 세련된 명조</button>
+      </div>
+
       <div class="ep-sec">제목 스타일</div>
       ${epSizeRow('titleSize','크기',sl.titleSize,20,120)}
       ${epColorOpacity('titleColor','titleOpacity','색상',sl.titleColor,sl.titleOpacity)}
@@ -874,10 +930,11 @@ function buildSlideInner(sl, i) {
     </div>`;
   }
 
-  const tStyle  = `font-size:${p(sl.titleSize*f)}px;font-weight:${sl.titleWeight};color:${rgba(sl.titleColor,sl.titleOpacity)};line-height:1.3;word-break:keep-all;text-align:${sl.titleAlign};`;
-  const sStyle  = `font-size:${p(sl.subtitleSize*f)}px;font-weight:${sl.subtitleWeight};color:${rgba(sl.subtitleColor,sl.subtitleOpacity)};word-break:keep-all;`;
-  const bStyle  = `font-size:${p(sl.bodySize*f)}px;font-weight:${sl.bodyWeight};color:${rgba(sl.bodyColor,sl.bodyOpacity)};line-height:${sl.bodyLineHeight};word-break:keep-all;`;
-  const hStyle  = `font-size:${p(22*f)}px;color:${rgba(sl.hashtagsColor,sl.hashtagsOpacity)};word-break:break-all;`;
+  const ff = sl.fontFamily || 'Noto Sans KR';
+  const tStyle  = `font-size:${p(sl.titleSize*f)}px;font-weight:${sl.titleWeight};color:${rgba(sl.titleColor,sl.titleOpacity)};line-height:1.3;word-break:keep-all;text-align:${sl.titleAlign};font-family:'${ff}',sans-serif;`;
+  const sStyle  = `font-size:${p(sl.subtitleSize*f)}px;font-weight:${sl.subtitleWeight};color:${rgba(sl.subtitleColor,sl.subtitleOpacity)};word-break:keep-all;font-family:'${ff}',sans-serif;`;
+  const bStyle  = `font-size:${p(sl.bodySize*f)}px;font-weight:${sl.bodyWeight};color:${rgba(sl.bodyColor,sl.bodyOpacity)};line-height:${sl.bodyLineHeight};word-break:keep-all;font-family:'${ff}',sans-serif;`;
+  const hStyle  = `font-size:${p(22*f)}px;color:${rgba(sl.hashtagsColor,sl.hashtagsOpacity)};word-break:break-all;font-family:'${ff}',sans-serif;`;
 
   const badge = sl.badgeVisible && sl.badge ? (() => {
     const pos = sl.badgePos;
@@ -1097,10 +1154,11 @@ function buildSlideHQ(sl, i) {
   // % → px (1080×1350 기준)
   const px = pos => `left:${Math.round(pos.x/100*1080)}px;top:${Math.round(pos.y/100*1350)}px;max-width:940px;`;
 
-  const tStyle = `font-size:${sl.titleSize}px;font-weight:${sl.titleWeight};color:${rgba(sl.titleColor,sl.titleOpacity)};line-height:1.3;word-break:keep-all;text-align:${sl.titleAlign};`;
-  const sStyle = `font-size:${sl.subtitleSize}px;font-weight:${sl.subtitleWeight};color:${rgba(sl.subtitleColor,sl.subtitleOpacity)};word-break:keep-all;`;
-  const bStyle = `font-size:${sl.bodySize}px;font-weight:${sl.bodyWeight};color:${rgba(sl.bodyColor,sl.bodyOpacity)};line-height:${sl.bodyLineHeight};word-break:keep-all;`;
-  const hStyle = `font-size:26px;color:${rgba(sl.hashtagsColor,sl.hashtagsOpacity)};word-break:break-all;`;
+  const ff2 = sl.fontFamily || 'Noto Sans KR';
+  const tStyle = `font-size:${sl.titleSize}px;font-weight:${sl.titleWeight};color:${rgba(sl.titleColor,sl.titleOpacity)};line-height:1.3;word-break:keep-all;text-align:${sl.titleAlign};font-family:'${ff2}',sans-serif;`;
+  const sStyle = `font-size:${sl.subtitleSize}px;font-weight:${sl.subtitleWeight};color:${rgba(sl.subtitleColor,sl.subtitleOpacity)};word-break:keep-all;font-family:'${ff2}',sans-serif;`;
+  const bStyle = `font-size:${sl.bodySize}px;font-weight:${sl.bodyWeight};color:${rgba(sl.bodyColor,sl.bodyOpacity)};line-height:${sl.bodyLineHeight};word-break:keep-all;font-family:'${ff2}',sans-serif;`;
+  const hStyle = `font-size:26px;color:${rgba(sl.hashtagsColor,sl.hashtagsOpacity)};word-break:break-all;font-family:'${ff2}',sans-serif;`;
 
   const txt = (f, style, pos) => sl[f]
     ? `<div style="position:absolute;${px(pos)}${style}">${sl[f]}</div>` : '';
