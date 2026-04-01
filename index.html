@@ -346,33 +346,77 @@ async function generate(){
   ld(true,'AI가 콘텐츠를 생성 중...');
   const tone=document.getElementById('toneSelect').value;
 
-  const singleSlide=S.count===1;
-  const slideRule=singleSlide
-    ?'슬라이드 1장: type="cover" (모든 핵심을 하나에 담기)'
-    :'첫 번째: type="cover", 마지막: type="cta" (팔로우/저장 유도+해시태그), 나머지: type="content"';
+  const single = S.count === 1;
 
-  const prompt=`당신은 한국 인스타그램 카드뉴스 전문 크리에이터입니다.
-주제: "${topic}"
-톤: ${TONE_MAP[tone]}
-슬라이드 수: ${S.count}장
-구성: ${slideRule}
-imageKeyword: Pexels 검색용 영어 단어 2-3개
+  const systemPrompt = `당신은 한국 SNS 마케팅 전문가이자 인스타그램 카드뉴스 카피라이터입니다.
+사용자가 주제를 주면, 인스타그램에서 실제로 저장/공유되는 고품질 카드뉴스 슬라이드 내용을 JSON으로 생성합니다.
 
-반드시 순수 JSON만 응답 (마크다운/코드블록 없이):
-{"slides":[{"type":"cover","title":"제목(20자이내)","subtitle":"부제목(30자이내)","body":"본문","hashtags":"#태그","imageKeyword":"english keyword"}]}`;
+## 슬라이드 타입별 작성 규칙
+
+**cover (첫 슬라이드)**
+- title: 독자가 멈춰서 읽게 만드는 강렬한 훅 문장. "~하는 법", "~모르면 손해", "~비밀" 등 궁금증 유발. 20자 이내.
+- subtitle: title을 보완하는 한 줄 설명. 30자 이내.
+- body: 비워두기 (cover는 title/subtitle만으로 충분)
+- hashtags: 비워두기
+
+**content (본문 슬라이드)**
+- title: 해당 슬라이드의 핵심 소제목. 숫자 포함 권장 (예: "① 첫 번째 법칙"). 20자 이내.
+- subtitle: 비워두기 또는 한 줄 보조 설명
+- body: 실질적으로 도움되는 구체적 정보. 수치/사례/팁 포함. 3-4문장. 80자 이내.
+- hashtags: 비워두기
+
+**cta (마지막 슬라이드)**
+- title: "저장하고 나중에 봐요" 류의 액션 유도 문구. 15자 이내.
+- subtitle: 팔로우 유도 문구
+- body: 비워두기
+- hashtags: 관련 해시태그 5-8개. 인기태그+세부태그 조합.
+
+## 출력 규칙
+- 순수 JSON만 출력. 마크다운 코드블록 절대 금지.
+- imageKeyword: Pexels에서 검색할 영어 키워드 2-3단어 (한글 금지)
+- 모든 슬라이드가 하나의 스토리처럼 자연스럽게 연결되어야 함`;
+
+  const userPrompt = single
+    ? `주제: "${topic}" / 톤: ${TONE_MAP[tone]}
+1장짜리 카드뉴스. type="cover"로 모든 핵심을 임팩트 있게 담아주세요.
+{"slides":[{"type":"cover","title":"","subtitle":"","body":"","hashtags":"","imageKeyword":""}]}`
+    : `주제: "${topic}" / 톤: ${TONE_MAP[tone]} / 슬라이드 수: ${S.count}장
+구성: 1번=cover, ${S.count}번=cta, 나머지=content
+각 content 슬라이드는 서로 다른 핵심 포인트를 다뤄야 합니다.
+아래 형식으로 ${S.count}개 슬라이드를 만들어주세요:
+{"slides":[
+  {"type":"cover","title":"","subtitle":"","body":"","hashtags":"","imageKeyword":""},
+  {"type":"content","title":"","subtitle":"","body":"","hashtags":"","imageKeyword":""},
+  {"type":"cta","title":"","subtitle":"","body":"","hashtags":"","imageKeyword":""}
+]}`;
 
   try{
     const res=await fetch('https://api.groq.com/openai/v1/chat/completions',{
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':`Bearer ${S.gk}`},
-      body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:[{role:'user',content:prompt}],temperature:0.75,max_tokens:2048})
+      body:JSON.stringify({
+        model:'llama-3.3-70b-versatile',
+        messages:[
+          {role:'system', content:systemPrompt},
+          {role:'user', content:userPrompt}
+        ],
+        temperature:0.8,
+        max_tokens:3000
+      })
     });
     if(!res.ok){const e=await res.json();throw new Error(e.error?.message||`HTTP ${res.status}`);}
     const data=await res.json();
     let raw=data.choices[0].message.content;
     raw=raw.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
     const parsed=JSON.parse(raw);
-    S.slides=parsed.slides.map((s,i)=>({...s,badge:s.type==='cover'?'COVER':s.type==='cta'?'CTA':String(i+1).padStart(2,'0'),imageUrl:'',grad:GRADS[i%GRADS.length]}));
+    S.slides=parsed.slides.map((s,i)=>({
+      ...s,
+      badge:s.type==='cover'?'COVER':s.type==='cta'?'CTA':String(i+1).padStart(2,'0'),
+      imageUrl:'',
+      grad:GRADS[i%GRADS.length],
+      showSwipe: s.type==='cover',   // cover만 기본 ON
+      showPageNum: true               // 전체 기본 ON
+    }));
     if(S.pk){ld(true,'Pexels 이미지 검색 중...');await Promise.all(S.slides.map(async sl=>{if(sl.imageKeyword)sl.imageUrl=await pexelsFetch(sl.imageKeyword);}));}
     render();toast('생성 완료! 텍스트 클릭으로 편집 가능해요 ✅','ok');
   }catch(e){console.error(e);toast('오류: '+e.message,'err');}
@@ -422,8 +466,10 @@ function render(){
       <div class="sw-num"><span class="drag-handle">⠿</span> 슬라이드 ${i+1}</div>
       <div class="slide-card" id="sc${i}">${buildSlide(sl,i)}</div>
       <div class="sw-actions">
-        <button class="btn btn-ghost btn-sm" onclick="openImgModal(${i})">🖼️ 이미지</button>
-        <button class="btn btn-ghost btn-sm" onclick="dlSlide(${i})">⬇️ PNG</button>
+        <button class="btn btn-ghost btn-sm" onclick="openImgModal(${i})">🖼️</button>
+        <button class="btn btn-ghost btn-sm" onclick="toggleSwipe(${i})" title="SWIPE 표시 토글" style="${sl.showSwipe?'color:var(--accent)':'color:var(--muted)'}">SWIPE</button>
+        <button class="btn btn-ghost btn-sm" onclick="togglePageNum(${i})" title="페이지번호 토글" style="${sl.showPageNum?'color:var(--accent)':'color:var(--muted)'}">1/n</button>
+        <button class="btn btn-ghost btn-sm" onclick="dlSlide(${i})">⬇️</button>
         <button class="btn btn-ghost btn-sm" onclick="removeSlide(${i})" style="color:var(--danger);">✕</button>
       </div>
     </div>`).join('');
@@ -438,6 +484,9 @@ function removeSlide(i){
   if(!S.slides.length){document.getElementById('slidesWrap').innerHTML='<div class="empty"><div class="empty-icon">🎴</div><h3>슬라이드가 없어요</h3><p>✨ 카드뉴스 생성을 눌러보세요</p></div>';document.getElementById('dlAllBtn').style.display='none';document.getElementById('cToolbar').classList.remove('show');}
   else render();
 }
+
+function toggleSwipe(i){S.slides[i].showSwipe=!S.slides[i].showSwipe;render();}
+function togglePageNum(i){S.slides[i].showPageNum=!S.slides[i].showPageNum;render();}
 
 // ── Build slide (미리보기용)
 function buildSlide(sl,i){
@@ -456,9 +505,9 @@ function buildSlide(sl,i){
         ${edt('subtitle','font-size:10px;color:rgba(255,255,255,.7);margin-bottom:4px;word-break:keep-all;')}
         ${edt('body','font-size:10px;color:rgba(255,255,255,.85);line-height:1.6;word-break:keep-all;')}
         ${edt('hashtags','font-size:8px;color:#CCFF00;margin-top:6px;word-break:break-all;')}
-        <div style="display:flex;justify-content:space-between;margin-top:8px;opacity:.4;font-size:8px;color:#fff;">
-          <span>${sl.type==='cover'?'SWIPE →':''}</span><span>${i+1}/${total}</span>
-        </div>
+        ${(sl.showSwipe||sl.showPageNum)?`<div style="display:flex;justify-content:space-between;margin-top:8px;opacity:.4;font-size:8px;color:#fff;">
+          <span>${sl.showSwipe?'SWIPE →':''}</span><span>${sl.showPageNum?`${i+1}/${total}`:''}</span>
+        </div>`:''}
       </div>
     </div>`;}
 
@@ -526,9 +575,9 @@ function buildSlideHQ(sl,i){
         ${txt('subtitle','font-size:35px;color:rgba(255,255,255,.72);margin-bottom:18px;word-break:keep-all;')}
         ${txt('body','font-size:34px;color:rgba(255,255,255,.87);line-height:1.65;word-break:keep-all;')}
         ${txt('hashtags','font-size:26px;color:#CCFF00;margin-top:30px;word-break:break-all;')}
-        <div style="display:flex;justify-content:space-between;margin-top:44px;opacity:.4;font-size:26px;color:#fff;">
-          <span>${sl.type==='cover'?'SWIPE →':''}</span><span>${i+1} / ${total}</span>
-        </div>
+        ${(sl.showSwipe||sl.showPageNum)?`<div style="display:flex;justify-content:space-between;margin-top:44px;opacity:.4;font-size:26px;color:#fff;">
+          <span>${sl.showSwipe?'SWIPE →':''}</span><span>${sl.showPageNum?`${i+1} / ${total}`:''}</span>
+        </div>`:''}
       </div>
     </div>`;
 
